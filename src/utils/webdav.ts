@@ -1,0 +1,250 @@
+/**
+ * BookmarkHub WebDAV 客户端模块
+ * 
+ * 提供 WebDAV 协议的读写操作
+ * 用于将书签数据存储到用户自己的 WebDAV 服务器
+ * 支持: Nextcloud, OwnCloud, NAS 等支持 WebDAV 的服务
+ */
+
+import { Setting } from './setting';
+
+/**
+ * WebDAV 客户端类
+ * 封装 WebDAV 协议的基本操作
+ * 
+ * 支持的操作:
+ * - 读取文件 (read)
+ * - 写入文件 (write)
+ * - 检查文件是否存在 (exists)
+ * 
+ * 使用 Basic Auth 进行身份验证
+ */
+export class WebDAVClient {
+    /** WebDAV 服务器基础 URL */
+    private baseUrl: string;
+    /** 用户名 */
+    private username: string;
+    /** 密码 */
+    private password: string;
+
+    /**
+     * 构造函数
+     * 
+     * @param baseUrl - WebDAV 服务器地址 (如: https://your-nas.com/remote.php/dav/files/username/)
+     * @param username - 用户名
+     * @param password - 密码
+     */
+    constructor(baseUrl: string, username: string, password: string) {
+        // 移除末尾的斜杠，保持 URL 格式一致
+        this.baseUrl = baseUrl.replace(/\/$/, '');
+        this.username = username;
+        this.password = password;
+    }
+
+    /**
+     * 生成 Basic Auth 认证头
+     * 将用户名和密码组合并 Base64 编码
+     * 
+     * @returns Basic Auth 认证字符串
+     */
+    private getAuthHeader(): string {
+        // 组合用户名密码并进行 Base64 编码
+        const credentials = btoa(`${this.username}:${this.password}`);
+        return `Basic ${credentials}`;
+    }
+
+    /**
+     * 读取文件
+     * 使用 WebDAV GET 方法读取文件内容
+     * 
+     * @param path - 文件路径
+     * @returns Promise<string | null> 文件内容，失败返回 null
+     */
+    async read(path: string): Promise<string | null> {
+        try {
+            // 发送 GET 请求
+            const response = await fetch(`${this.baseUrl}${path}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': this.getAuthHeader(),
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            // 检查响应状态
+            if (!response.ok) {
+                throw new Error(`WebDAV read failed: ${response.status}`);
+            }
+
+            // 返回文件内容
+            return await response.text();
+        } catch (error) {
+            console.error('WebDAV read error:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 写入文件
+     * 使用 WebDAV PUT 方法创建或更新文件
+     * 
+     * @param path - 文件路径
+     * @param content - 文件内容
+     * @returns Promise<boolean> 是否成功
+     */
+    async write(path: string, content: string): Promise<boolean> {
+        try {
+            // 发送 PUT 请求
+            const response = await fetch(`${this.baseUrl}${path}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': this.getAuthHeader(),
+                    'Content-Type': 'application/json'
+                },
+                body: content
+            });
+
+            // 返回是否成功
+            return response.ok;
+        } catch (error) {
+            console.error('WebDAV write error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 检查文件是否存在
+     * 使用 WebDAV HEAD 方法检查文件
+     * 
+     * @param path - 文件路径
+     * @returns Promise<boolean> 是否存在
+     */
+    async exists(path: string): Promise<boolean> {
+        try {
+            // 发送 HEAD 请求
+            const response = await fetch(`${this.baseUrl}${path}`, {
+                method: 'HEAD',
+                headers: {
+                    'Authorization': this.getAuthHeader()
+                }
+            });
+
+            return response.ok;
+        } catch {
+            return false;
+        }
+    }
+}
+
+/**
+ * 获取 WebDAV 客户端实例
+ * 从设置中读取 WebDAV 配置并创建客户端
+ * 
+ * @returns Promise<WebDAVClient | null> 客户端实例，如果未配置返回 null
+ */
+export async function getWebDAVClient(): Promise<WebDAVClient | null> {
+    // 获取设置
+    const setting = await Setting.build();
+
+    // 检查是否选择了 WebDAV 存储类型
+    if (setting.storageType !== 'webdav') {
+        return null;
+    }
+
+    // 检查 WebDAV 配置是否完整
+    if (!setting.webdavUrl || !setting.webdavUsername || !setting.webdavPassword) {
+        return null;
+    }
+
+    // 创建并返回客户端实例
+    return new WebDAVClient(
+        setting.webdavUrl,
+        setting.webdavUsername,
+        setting.webdavPassword
+    );
+}
+
+/**
+ * 从 WebDAV 读取书签数据
+ * 
+ * @param path - 可选的自定义路径，默认使用设置中的路径
+ * @returns Promise<string | null> 书签数据的 JSON 字符串
+ */
+export async function webdavRead(path?: string): Promise<string | null> {
+    // 获取客户端
+    const client = await getWebDAVClient();
+    if (!client) return null;
+
+    // 获取设置中的默认路径
+    const setting = await Setting.build();
+    return await client.read(path || setting.webdavPath);
+}
+
+/**
+ * 向 WebDAV 写入书签数据
+ * 
+ * @param content - 要写入的内容 (JSON 字符串)
+ * @param path - 可选的自定义路径，默认使用设置中的路径
+ * @returns Promise<boolean> 是否成功
+ */
+export async function webdavWrite(content: string, path?: string): Promise<boolean> {
+    // 获取客户端
+    const client = await getWebDAVClient();
+    if (!client) return false;
+
+    // 获取设置中的默认路径
+    const setting = await Setting.build();
+    return await client.write(path || setting.webdavPath, content);
+}
+
+/**
+ * 测试 WebDAV 连接
+ * 通过写入和读取测试文件来验证连接是否正常
+ * 
+ * 使用方法:
+ *   const result = await testWebDAVConnection(url, username, password);
+ *   if (result.success) {
+ *     console.log('连接成功');
+ *   } else {
+ *     console.log('连接失败:', result.message);
+ *   }
+ * 
+ * @param url - WebDAV 服务器地址
+ * @param username - 用户名
+ * @param password - 密码
+ * @returns Promise<{ success: boolean; message: string }> 测试结果
+ */
+export async function testWebDAVConnection(
+    url: string,
+    username: string,
+    password: string
+): Promise<{ success: boolean; message: string }> {
+    try {
+        // 创建测试客户端
+        const client = new WebDAVClient(url, username, password);
+
+        // 生成唯一的测试文件路径
+        const testPath = '/.bookmarkhub-test-' + Date.now();
+
+        // 1. 尝试写入测试文件
+        const writeResult = await client.write(testPath, 'test');
+        if (!writeResult) {
+            return { success: false, message: 'Failed to write test file' };
+        }
+
+        // 2. 尝试读取测试文件
+        const readResult = await client.read(testPath);
+        if (readResult !== 'test') {
+            return { success: false, message: 'Failed to read test file' };
+        }
+
+        // 3. 清理测试文件
+        await client.write(testPath, '');
+
+        // 4. 返回成功
+        return { success: true, message: 'Connection successful' };
+    } catch (error: unknown) {
+        const err = error as Error;
+        return { success: false, message: err.message };
+    }
+}

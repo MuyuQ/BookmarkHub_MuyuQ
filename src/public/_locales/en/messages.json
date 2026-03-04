@@ -1,0 +1,262 @@
+{
+    "extensionName": {
+        "message": "BookmarkHub - sync bookmarks ",
+        "description": ""
+    },
+    "extensionDescription": {
+        "message": "BookmarkHub,sync bookmarks across different browsers",
+        "description": ""
+    },
+    "uploadBookmarks": {
+        "message": "Upload Bookmarks",
+        "description": ""
+    },
+    "downloadBookmarks": {
+        "message": "DownLoad Bookmarks",
+        "description": ""
+    },
+    "syncBookmarks": {
+        "message": "Sync Bookmarks",
+        "description": ""
+    },
+    "removeAllBookmarks": {
+        "message": "Remove All Bookmarks",
+        "description": ""
+    },
+    "settings": {
+        "message": "Settings",
+        "description": ""
+    },
+    "help": {
+        "message": "Help",
+        "description": ""
+    },
+    "localCount": {
+        "message": "Local Bookmark Count",
+        "description": ""
+    },
+    "remoteCount": {
+        "message": "Remote Bookmark Count",
+        "description": ""
+    },
+    "githubToken": {
+        "message": "Github Token",
+        "description": ""
+    },
+    "gistID": {
+        "message": "Gist ID",
+        "description": ""
+    },
+    "gistFileName": {
+        "message": "Gist File Name",
+        "description": ""
+    },
+    "enableNotifications": {
+        "message": "Enable Notifications",
+        "description": ""
+    },
+    "success": {
+        "message": "Success",
+        "description": ""
+    },
+    "failed": {
+        "message": "Failed",
+        "description": ""
+    },
+    "error": {
+        "message": "Error",
+        "description": ""
+    },
+    "author": {
+        "message": "Author",
+        "description": ""
+    },
+    "uploadBookmarksDesc": {
+        "message": "Upload all the bookmarks of the local browser to the server",
+        "description": ""
+    },
+    "downloadBookmarksDesc": {
+        "message": "First clear the bookmarks in the local browser, and then download all the bookmarks on the server to the local browser",
+        "description": ""
+    },
+    "syncBookmarksDesc": {
+        "message": "Merge all the bookmarks on the server into the local browser, and then upload them to the server",
+        "description": ""
+    },
+    "removeAllBookmarksDesc": {
+        "message": "Remove All Bookmarks, Please backup first",
+        "description": ""
+    },
+    "autoSync": {
+        "message": "Auto Sync",
+        "description": ""
+    },
+    "syncInterval": {
+        "message": "Sync Interval",
+        "description": ""
+    },
+    "syncMode": {
+        "message": "Sync Mode",
+        "description": ""
+    },
+    "conflictMode": {
+        "message": "Conflict Mode",
+        "description": ""
+    },
+    "storageType": {
+        "message": "Storage Type",
+        "description": ""
+    },
+    "webdav": {
+        "message": "WebDAV",
+        "description": ""
+    },
+    "syncConflict": {
+        "message": "Sync Conflict",
+        "description": ""
+    },
+    "conflictsDetected": {
+        "message": "conflicts detected",
+        "description": ""
+    },
+    "export": {
+        "message": "Export",
+        "description": ""
+    },
+    "import": {
+        "message": "Import",
+        "description": ""
+    },
+    "githubGist": {
+        "message": "GitHub Gist",
+        "description": ""
+    },
+    "getToken": {
+        "message": "Get Token",
+        "description": ""
+    },
+    "autoSync": {
+        "message": "Auto Sync",
+        "description": ""
+    },
+    "enableAutoSync": {
+        "message": "Enable Auto Sync",
+        "description": ""
+    },
+    "syncMode": {
+        "message": "Sync Mode",
+        "description": ""
+    },
+    "syncModeTimer": {
+        "message": "Timer",
+        "description": ""
+    },
+    "syncModeEvent": {
+        "message": "Event",
+        "description": ""
+    },
+    "syncModeHybrid": {
+        "message": "Hybrid",
+        "description": ""
+    },
+    "syncInterval": {
+        "message": "Sync Interval",
+        "description": ""
+    },
+    "interval15": {
+        "message": "15 minutes",
+        "description": ""
+    },
+    "interval30": {
+        "message": "30 minutes",
+        "description": ""
+    },
+    "interval60": {
+        "message": "1 hour",
+        "description": ""
+    },
+    "interval360": {
+        "message": "6 hours",
+        "description": ""
+    },
+    "interval1440": {
+        "message": "24 hours",
+        "description": ""
+    },
+    "conflictMode": {
+        "message": "Conflict Mode",
+        "description": ""
+    },
+    "conflictAuto": {
+        "message": "Auto Merge",
+        "description": ""
+    },
+    "conflictPrompt": {
+        "message": "Prompt Me",
+        "description": ""
+    },
+    "storageService": {
+        "message": "Storage Service",
+        "description": ""
+    },
+    "storageType": {
+        "message": "Type",
+        "description": ""
+    },
+    "webdav": {
+        "message": "WebDAV",
+        "description": ""
+    },
+    "webdavUrl": {
+        "message": "WebDAV URL",
+        "description": ""
+    },
+    "webdavUsername": {
+        "message": "WebDAV Username",
+        "description": ""
+    },
+    "webdavPassword": {
+        "message": "WebDAV Password",
+        "description": ""
+    },
+    "webdavPath": {
+        "message": "WebDAV Path",
+        "description": ""
+    },
+    "testWebDAVConnection": {
+        "message": "Test WebDAV Connection",
+        "description": ""
+    },
+    "testing": {
+        "message": "Testing...",
+        "description": ""
+    },
+    "exportBookmarks": {
+        "message": "Export Bookmarks",
+        "description": ""
+    },
+    "importBookmarks": {
+        "message": "Import Bookmarks",
+        "description": ""
+    },
+    "intervalSync": {
+        "message": "Timer Sync",
+        "description": ""
+    },
+    "intervalSyncDesc": {
+        "message": "Automatically sync bookmarks at set intervals",
+        "description": ""
+    },
+    "eventSync": {
+        "message": "Event Sync",
+        "description": ""
+    },
+    "eventSyncDesc": {
+        "message": "Sync when browser starts or bookmarks change (create/modify/delete)",
+        "description": ""
+    },
+    "interval720": {
+        "message": "12 hours",
+        "description": ""
+    }
+}

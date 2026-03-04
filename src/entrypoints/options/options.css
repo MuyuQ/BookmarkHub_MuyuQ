@@ -1,0 +1,143 @@
+/* Global dark theme */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+    min-height: 100vh !important;
+}
+
+#root {
+    margin: 10px;
+    width: 750px;
+    min-height: 700px;
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    padding: 20px;
+}
+
+/* Dark theme for form elements */
+.form-control {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+.form-control:focus {
+    background-color: #333 !important;
+    color: #fff !important;
+    border-color: #58a6ff !important;
+}
+
+.form-control::placeholder {
+    color: #888 !important;
+}
+
+.form-label {
+    color: #e0e0e0 !important;
+}
+
+.form-check-label {
+    color: #e0e0e0 !important;
+}
+
+/* Dark theme for cards */
+.card {
+    background-color: #252525 !important;
+    border-color: #333 !important;
+    color: #e0e0e0 !important;
+}
+
+.card-header {
+    background-color: #2d2d2d !important;
+    border-color: #333 !important;
+    color: #e0e0e0 !important;
+}
+
+.card-body {
+    background-color: #252525 !important;
+    color: #e0e0e0 !important;
+}
+
+/* Dark theme for buttons */
+.btn-outline-secondary {
+    background-color: #333 !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #444 !important;
+    color: #fff !important;
+}
+
+/* Links */
+a {
+    color: #58a6ff !important;
+}
+
+a:hover {
+    color: #79b8ff !important;
+}
+
+/* Form select dropdown */
+.form-control option {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+}
+
+/* Input group */
+.input-group-text {
+    background-color: #333 !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+/* Focus states */
+.form-check-input:focus {
+    border-color: #58a6ff !important;
+    box-shadow: 0 0 0 0.1rem rgba(88, 166, 255, 0.25) !important;
+}
+
+/* Small text and muted */
+.text-muted {
+    color: #888 !important;
+}
+
+small {
+    color: #888 !important;
+    font-size: 12px !important;
+}
+
+/* Form checkboxes */
+.form-check-input {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+}
+
+.form-check-input:checked {
+    background-color: #58a6ff !important;
+    border-color: #58a6ff !important;
+}
+
+/* Form switch */
+.form-switch .form-check-input {
+    width: 2.5em !important;
+    height: 1.25em !important;
+    cursor: pointer;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #58a6ff !important;
+    border-color: #58a6ff !important;
+}
+
+.form-switch .form-check-input:focus {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23555'/%3e%3c/svg%3e") !important;
+    border-color: #58a6ff !important;
+    box-shadow: 0 0 0 0.1rem rgba(88, 166, 255, 0.25) !important;
+}
+
+.form-switch .form-check-input:checked:focus {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e") !important;
+}

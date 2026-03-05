@@ -10,6 +10,7 @@ import {
 import { exportBookmarks } from '../../utils/exporter'
 import { importBookmarks } from '../../utils/importer'
 import { BookmarkInfo } from '../../utils/models'
+import { flattenBookmarks } from '../../utils/bookmarkUtils'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './popup.css'
 
@@ -55,19 +56,6 @@ const Popup: React.FC = () => {
             browser.runtime.onMessage.removeListener(handleMessage);
         };
     }, [])
-    
-    const flattenBookmarks = (bookmarks: BookmarkInfo[]): BookmarkInfo[] => {
-        const result: BookmarkInfo[] = [];
-        for (const b of bookmarks) {
-            if (b.url) {
-                result.push({ title: b.title, url: b.url });
-            }
-            if (b.children) {
-                result.push(...flattenBookmarks(b.children));
-            }
-        }
-        return result;
-    };
     
     const handleExport = async () => {
         const bookmarks = await browser.bookmarks.getTree();

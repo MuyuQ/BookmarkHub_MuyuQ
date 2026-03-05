@@ -5,11 +5,18 @@
  * - GitHub Gist API 操作 (获取/更新)
  * - 浏览器书签获取和格式化
  * - 书签数量统计
+ * 
+ * 注意：书签工具函数已移至 bookmarkUtils.ts 统一管理
  */
 
 import { Setting } from './setting';
 import { http } from './http';
 import { BookmarkInfo } from './models';
+import { getBookmarkCount, formatBookmarks } from './bookmarkUtils';
+import { retryOperation } from './retry';
+
+// 重新导出工具函数，保持向后兼容
+export { getBookmarkCount, formatBookmarks };
 
 /**
  * BookmarkService 类
@@ -29,36 +36,28 @@ class BookmarkService {
      * 4. 返回文件内容或 null
      */
     async get(): Promise<string | null> {
-        // 获取设置
-        const setting = await Setting.build();
-        
-        // 调用 GitHub Gist API 获取数据
-        const resp = await http.get(`gists/${setting.gistID}`).json() as any;
-        
-        // 检查响应中是否包含文件
-        if (resp?.files) {
-            // 获取所有文件名
-            const filenames = Object.keys(resp.files);
+        return retryOperation(async () => {
+            const setting = await Setting.build();
             
-            // 查找匹配的文件名
-            if (filenames.indexOf(setting.gistFileName) !== -1) {
-                // 获取目标文件
-                const gistFile = resp.files[setting.gistFileName];
+            const resp = await http.get(`gists/${setting.gistID}`).json() as any;
+            
+            if (resp?.files) {
+                const filenames = Object.keys(resp.files);
                 
-                // 如果文件被 GitHub 截断 (大型文件)
-                if (gistFile.truncated) {
-                    // 使用 raw_url 获取完整内容
-                    const txt = http.get(gistFile.raw_url, { prefixUrl: '' }).text();
-                    return txt;
-                } else {
-                    // 直接返回文件内容
-                    return gistFile.content;
+                if (filenames.indexOf(setting.gistFileName) !== -1) {
+                    const gistFile = resp.files[setting.gistFileName];
+                    
+                    if (gistFile.truncated) {
+                        const txt = await http.get(gistFile.raw_url, { prefixUrl: '' }).text();
+                        return txt;
+                    } else {
+                        return gistFile.content;
+                    }
                 }
             }
-        }
-        
-        // 未找到文件返回 null
-        return null;
+            
+            return null;
+        }, { maxRetries: 3, logRetries: true });
     }
 
     /**
@@ -82,11 +81,10 @@ class BookmarkService {
      * 只更新指定的文件名，保留其他文件不变
      */
     async update(data: any): Promise<any> {
-        // 获取设置
-        const setting = await Setting.build();
-        
-        // 调用 GitHub Gist API 更新数据
-        return http.patch(`gists/${setting.gistID}`, { json: data }).json();
+        return retryOperation(async () => {
+            const setting = await Setting.build();
+            return http.patch(`gists/${setting.gistID}`, { json: data }).json();
+        }, { maxRetries: 3, logRetries: true });
     }
 }
 
@@ -100,51 +98,6 @@ class BookmarkService {
  */
 export async function getBookmarks(): Promise<BookmarkInfo[]> {
     return await browser.bookmarks.getTree();
-}
-
-/**
- * 格式化书签数据
- * 提取书签树的 children 部分，即根文件夹下的内容
- * 
- * @param bookmarks - 完整的书签树
- * @returns BookmarkInfo[] | undefined 格式化后的书签数组
- * 
- * 注意: 浏览器返回的 bookmarkTree[0] 是虚拟根节点
- * 实际的书签存储在 its children 中
- */
-export function formatBookmarks(bookmarks: BookmarkInfo[]): BookmarkInfo[] | undefined {
-    if (bookmarks[0]?.children) {
-        return bookmarks[0].children;
-    }
-    return undefined;
-}
-
-/**
- * 递归计算书签数量
- * 统计所有有效书签 (有 URL 的节点) 的数量
- * 
- * @param bookmarkList - 书签数组或 undefined
- * @returns number 书签总数
- * 
- * 算法:
- * - 遍历所有节点
- * - 如果节点有 URL (是书签而非文件夹)，计数 +1
- * - 如果节点有 children，递归统计子节点
- */
-export function getBookmarkCount(bookmarkList: BookmarkInfo[] | undefined): number {
-    let count = 0;
-    if (bookmarkList) {
-        bookmarkList.forEach(c => {
-            if (c.url) {
-                // 有 URL 的是书签，计数 +1
-                count++;
-            } else {
-                // 没有 URL 的是文件夹，递归统计子节点
-                count += getBookmarkCount(c.children);
-            }
-        });
-    }
-    return count;
 }
 
 // 导出 BookmarkService 单例

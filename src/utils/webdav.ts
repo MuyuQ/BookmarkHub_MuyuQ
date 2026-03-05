@@ -7,6 +7,7 @@
  */
 
 import { Setting } from './setting';
+import { retryOperation } from './retry';
 
 /**
  * WebDAV 客户端类
@@ -56,28 +57,28 @@ export class WebDAVClient {
     /**
      * 读取文件
      * 使用 WebDAV GET 方法读取文件内容
+     * 支持自动重试
      * 
      * @param path - 文件路径
      * @returns Promise<string | null> 文件内容，失败返回 null
      */
     async read(path: string): Promise<string | null> {
         try {
-            // 发送 GET 请求
-            const response = await fetch(`${this.baseUrl}${path}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': this.getAuthHeader(),
-                    'Content-Type': 'application/json'
+            return await retryOperation(async () => {
+                const response = await fetch(`${this.baseUrl}${path}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': this.getAuthHeader(),
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`WebDAV read failed: ${response.status}`);
                 }
-            });
 
-            // 检查响应状态
-            if (!response.ok) {
-                throw new Error(`WebDAV read failed: ${response.status}`);
-            }
-
-            // 返回文件内容
-            return await response.text();
+                return await response.text();
+            }, { maxRetries: 3, logRetries: true });
         } catch (error) {
             console.error('WebDAV read error:', error);
             return null;
@@ -87,6 +88,7 @@ export class WebDAVClient {
     /**
      * 写入文件
      * 使用 WebDAV PUT 方法创建或更新文件
+     * 支持自动重试
      * 
      * @param path - 文件路径
      * @param content - 文件内容
@@ -94,18 +96,22 @@ export class WebDAVClient {
      */
     async write(path: string, content: string): Promise<boolean> {
         try {
-            // 发送 PUT 请求
-            const response = await fetch(`${this.baseUrl}${path}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': this.getAuthHeader(),
-                    'Content-Type': 'application/json'
-                },
-                body: content
-            });
+            return await retryOperation(async () => {
+                const response = await fetch(`${this.baseUrl}${path}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': this.getAuthHeader(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: content
+                });
 
-            // 返回是否成功
-            return response.ok;
+                if (!response.ok) {
+                    throw new Error(`WebDAV write failed: ${response.status}`);
+                }
+
+                return true;
+            }, { maxRetries: 3, logRetries: true });
         } catch (error) {
             console.error('WebDAV write error:', error);
             return false;

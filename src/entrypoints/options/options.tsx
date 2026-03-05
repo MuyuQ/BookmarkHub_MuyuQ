@@ -12,6 +12,49 @@ const Popup: React.FC = () => {
     const [testingConnection, setTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<{ success: boolean; message: string } | null>(null);
     const [enableIntervalSync, setEnableIntervalSync] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [storageType, setStorageType] = useState<string>('github');
+    
+    const validateSettings = (): string[] => {
+        const errors: string[] = [];
+        const form = document.getElementById('formOptions') as HTMLFormElement;
+        const formData = new FormData(form);
+        
+        const currentStorageType = formData.get('storageType') as string;
+        
+        if (currentStorageType === 'github') {
+            const githubToken = formData.get('githubToken') as string;
+            const gistID = formData.get('gistID') as string;
+            
+            if (!githubToken || githubToken.trim() === '') {
+                errors.push('GitHub Token 不能为空');
+            }
+            if (!gistID || gistID.trim() === '') {
+                errors.push('Gist ID 不能为空');
+            }
+        } else if (currentStorageType === 'webdav') {
+            const webdavUrl = formData.get('webdavUrl') as string;
+            const webdavUsername = formData.get('webdavUsername') as string;
+            const webdavPassword = formData.get('webdavPassword') as string;
+            
+            if (!webdavUrl || webdavUrl.trim() === '') {
+                errors.push('WebDAV URL 不能为空');
+            }
+            if (!webdavUsername || webdavUsername.trim() === '') {
+                errors.push('WebDAV 用户名不能为空');
+            }
+            if (!webdavPassword || webdavPassword.trim() === '') {
+                errors.push('WebDAV 密码不能为空');
+            }
+        }
+        
+        return errors;
+    };
+    
+    const handleStorageTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setStorageType(e.target.value);
+        setValidationErrors([]);
+    };
     
     useEffect(() => {
         optionsStorage.syncForm('#formOptions').then(() => {
@@ -43,9 +86,26 @@ const Popup: React.FC = () => {
         setTestingConnection(false);
     };
     
+    const handleFormChange = () => {
+        const errors = validateSettings();
+        setValidationErrors(errors);
+    };
+    
     return (
         <Container>
-            <Form id='formOptions' name='formOptions'>
+            {validationErrors.length > 0 && (
+                <Card className="mb-3 border-danger">
+                    <Card.Header className="bg-danger text-white">设置验证错误</Card.Header>
+                    <Card.Body>
+                        <ul className="mb-0">
+                            {validationErrors.map((error, index) => (
+                                <li key={index} className="text-danger">{error}</li>
+                            ))}
+                        </ul>
+                    </Card.Body>
+                </Card>
+            )}
+            <Form id='formOptions' name='formOptions' onChange={handleFormChange}>
                 <Card className="mb-3">
                     <Card.Header>{browser.i18n.getMessage('githubGist')}</Card.Header>
                     <Card.Body>
@@ -161,7 +221,7 @@ const Popup: React.FC = () => {
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('storageType')}</Form.Label>
                             <Col sm={9} lg={10} xs={9}>
-                                <Form.Control name="storageType" as="select" ref={register} size="sm">
+                                <Form.Control name="storageType" as="select" ref={register} size="sm" onChange={handleStorageTypeChange}>
                                     <option value="github">{browser.i18n.getMessage('githubGist')}</option>
                                     <option value="webdav">{browser.i18n.getMessage('webdav')}</option>
                                 </Form.Control>

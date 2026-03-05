@@ -4,6 +4,7 @@ import { startAutoSync, stopAutoSync, performSync } from '../utils/sync'
 import iconLogo from '../assets/icon.png'
 import { OperType, BookmarkInfo, SyncDataInfo, RootBookmarksType, BrowserType } from '../utils/models'
 import { Bookmarks } from 'wxt/browser'
+import { getBookmarkCount, formatBookmarks as formatBookmarkTree } from '../utils/bookmarkUtils'
 export default defineBackground(() => {
 
   browser.runtime.onInstalled.addListener(async c => {
@@ -97,17 +98,17 @@ export default defineBackground(() => {
     }
   })
 
-  async function uploadBookmarks() {
+async function uploadBookmarks() {
     try {
       let setting = await Setting.build()
       if (setting.githubToken == '') {
-        throw new Error("Gist Token Not Found");
+        throw new Error("GitHub Token 未设置。请在设置页面配置您的 GitHub Personal Access Token。");
       }
       if (setting.gistID == '') {
-        throw new Error("Gist ID Not Found");
+        throw new Error("Gist ID 未设置。请先创建一个 Gist 并在设置页面填入其 ID。");
       }
       if (setting.gistFileName == '') {
-        throw new Error("Gist File Not Found");
+        throw new Error("Gist 文件名未设置。请在设置页面指定要使用的文件名。");
       }
       let bookmarks = await getBookmarks();
       let syncdata = new SyncDataInfo();
@@ -266,13 +267,13 @@ export default defineBackground(() => {
     try {
       let setting = await Setting.build()
       if (setting.githubToken == '') {
-        throw new Error("Gist Token Not Found");
+        throw new Error("GitHub Token 未设置。请在设置页面配置您的 GitHub Personal Access Token。");
       }
       if (setting.gistID == '') {
-        throw new Error("Gist ID Not Found");
+        throw new Error("Gist ID 未设置。请先创建一个 Gist 并在设置页面填入其 ID。");
       }
       if (setting.gistFileName == '') {
-        throw new Error("Gist File Not Found");
+        throw new Error("Gist 文件名未设置。请在设置页面指定要使用的文件名。");
       }
 
       let bookmarks = await getBookmarks();
@@ -416,22 +417,7 @@ export default defineBackground(() => {
     }
   }
 
-  function getBookmarkCount(bookmarkList: BookmarkInfo[] | undefined) {
-    let count = 0;
-    if (bookmarkList) {
-      bookmarkList.forEach(c => {
-        if (c.url) {
-          count = count + 1;
-        }
-        else {
-          count = count + getBookmarkCount(c.children);
-        }
-      });
-    }
-    return count;
-  }
-
-  async function refreshLocalCount() {
+async function refreshLocalCount() {
     let bookmarkList = await getBookmarks();
     const count = getBookmarkCount(bookmarkList);
     await browser.storage.local.set({ localCount: count });

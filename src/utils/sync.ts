@@ -12,7 +12,8 @@
 import { Setting } from './setting';
 import { BookmarkInfo, SyncDataInfo, SyncResult, ConflictInfo } from './models';
 import BookmarkService from './services';
-import { getBookmarks, formatBookmarks, getBookmarkCount } from './services';
+import { getBookmarks } from './services';
+import { formatBookmarks, getBookmarkCount } from './bookmarkUtils';
 import { webdavRead, webdavWrite } from './webdav';
 
 /**

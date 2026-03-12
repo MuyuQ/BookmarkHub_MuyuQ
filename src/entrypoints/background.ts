@@ -223,13 +223,14 @@ async function uploadBookmarks() {
         });
       }
     }
-    catch (error: any) {
-      console.error(error);
+    catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error(err);
       await browser.notifications.create({
         type: "basic",
         iconUrl: iconLogo,
         title: browser.i18n.getMessage('downloadBookmarks'),
-        message: `${browser.i18n.getMessage('error')}：${error.message}`
+        message: `${browser.i18n.getMessage('error')}：${err.message}`
       });
     }
   }
@@ -327,13 +328,14 @@ async function uploadBookmarks() {
         });
       }
     }
-    catch (error: any) {
-      console.error(error);
+    catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error(err);
       await browser.notifications.create({
         type: "basic",
         iconUrl: iconLogo,
         title: browser.i18n.getMessage('removeAllBookmarks'),
-        message: `${browser.i18n.getMessage('error')}：${error.message}`
+        message: `${browser.i18n.getMessage('error')}：${err.message}`
       });
     }
   }

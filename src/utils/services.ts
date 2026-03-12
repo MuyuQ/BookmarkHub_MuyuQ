@@ -19,6 +19,32 @@ import { retryOperation } from './retry';
 export { getBookmarkCount, formatBookmarks };
 
 /**
+ * GitHub Gist 文件接口
+ */
+export interface GistFile {
+  content: string;
+  truncated?: boolean;
+  raw_url: string;
+}
+
+/**
+ * GitHub Gist 响应接口
+ */
+export interface GistResponse {
+  files: Record<string, GistFile>;
+  description?: string;
+  id?: string;
+}
+
+/**
+ * GitHub Gist 更新数据接口
+ */
+export interface GistUpdateData {
+  files: Record<string, { content: string }>;
+  description?: string;
+}
+
+/**
  * BookmarkService 类
  * 封装 GitHub Gist API 的所有操作
  * 使用单例模式导出
@@ -39,7 +65,7 @@ class BookmarkService {
         return retryOperation(async () => {
             const setting = await Setting.build();
             
-            const resp = await http.get(`gists/${setting.gistID}`).json() as any;
+            const resp = await http.get(`gists/${setting.gistID}`).json() as GistResponse;
             
             if (resp?.files) {
                 const filenames = Object.keys(resp.files);
@@ -80,7 +106,7 @@ class BookmarkService {
      * 使用 PATCH 方法更新 Gist
      * 只更新指定的文件名，保留其他文件不变
      */
-    async update(data: any): Promise<any> {
+    async update(data: GistUpdateData): Promise<GistResponse> {
         return retryOperation(async () => {
             const setting = await Setting.build();
             return http.patch(`gists/${setting.gistID}`, { json: data }).json();

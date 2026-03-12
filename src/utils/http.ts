@@ -85,7 +85,7 @@ export const http = ky.create({
  * 示例: PATCH 请求
  * 更新 Gist 内容
  * 
- * async function patch(url: string, data: any) {
+ * async function patch<T>(url: string, data: T) {
  *   return http.patch(url, { json: data });
  * }
  */

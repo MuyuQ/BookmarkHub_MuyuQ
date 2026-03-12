@@ -1,7 +1,11 @@
 # AGENTS.md - BookmarkHub Development Guide
 
+**Generated:** 2026-03-12 | **Commit:** 2854ced | **Branch:** main
+
 ## Project Overview
 BookmarkHub is a browser extension (Chrome/Firefox) for syncing bookmarks via GitHub Gist or WebDAV. Built with WXT, React 18, and TypeScript.
+
+**Stack:** WXT 0.19 + React 18 + TypeScript + Bootstrap 4 + ky (HTTP) + webext-options-sync
 
 ## Commands
 
@@ -181,6 +185,32 @@ src/
 - GitHub Gist: Primary storage via `BookmarkService` class
 - WebDAV: Alternative storage via `webdav.ts` module
 - Storage type selected via `storageType` setting
+
+---
+
+## Testing Status
+
+**No test framework configured.** To add tests:
+```bash
+npm install -D vitest
+npm test  # Currently not configured
+npx vitest run src/utils/services.test.ts  # Run single test file
+```
+
+---
+
+## Anti-Patterns & TODOs
+
+### DO NOT
+- Use `chrome` API (use `browser` for cross-browser compatibility)
+- Forget `return true` in async message listeners
+- Use `as any` or `@ts-ignore` (use `unknown` with type assertion)
+- Access `optionsStorage` directly for reads (use `Setting.build()`)
+
+### TODO Items (Unimplemented)
+- `sync.ts` - Complex merge logic for conflict resolution
+- `sync.ts` - Change detection implementation
+- WebDAV sync is partially implemented (read/write work, merge pending)
 
 ---
 

@@ -1,6 +1,6 @@
 # BookmarkHub 优化方案
 
-**版本:** v1.0  
+**版本:** v1.1  
 **日期:** 2026-03-12  
 **基于:** 项目审查报告 (PROJECT_REVIEW.md)  
 
@@ -11,68 +11,13 @@
 1. **提升代码质量** - 消除技术债务，提高可维护性
 2. **增强类型安全** - 移除 `any` 类型，完善 TypeScript 类型
 3. **统一错误处理** - 建立标准化错误处理机制
-4. **添加测试覆盖** - 为核心功能添加单元测试
-5. **优化性能** - 减少 bundle 大小，提升加载速度
+4. **优化性能** - 减少 bundle 大小，提升加载速度
 
 ---
 
 ## 阶段一：基础优化（第1-2周）
 
-### 任务 1.1：添加测试框架 ⭐⭐⭐⭐⭐
-
-**目标：** 建立测试基础设施，为核心工具函数添加单元测试
-
-**实施步骤：**
-
-```bash
-# 1. 安装 Vitest
-npm install -D vitest @vitest/ui @testing-library/react
-
-# 2. 创建配置文件 vitest.config.ts
-cat > vitest.config.ts << 'EOF'
-import { defineConfig } from 'vitest/config';
-
-export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        '.wxt/',
-        '.output/',
-        '**/*.d.ts',
-      ],
-    },
-  },
-});
-EOF
-
-# 3. 更新 package.json 脚本
-npm pkg set scripts.test="vitest"
-npm pkg set scripts["test:ui"]="vitest --ui"
-npm pkg set scripts["test:coverage"]="vitest run --coverage"
-```
-
-**测试文件创建计划：**
-
-| 测试文件 | 目标模块 | 测试点 | 预估时间 |
-|---------|---------|--------|---------|
-| `bookmarkUtils.test.ts` | bookmarkUtils.ts | getBookmarkCount, formatBookmarks, flattenBookmarks | 2h |
-| `retry.test.ts` | retry.ts | retryOperation, 指数退避, 错误处理 | 2h |
-| `models.test.ts` | models.ts | BookmarkInfo, SyncDataInfo 构造 | 1h |
-| `setting.test.ts` | setting.ts | Setting.build() | 2h |
-
-**验收标准：**
-- [ ] Vitest 运行无错误
-- [ ] 核心工具函数测试覆盖率 > 80%
-- [ ] CI 集成测试步骤
-
----
-
-### 任务 1.2：移除 `any` 类型 ⭐⭐⭐⭐⭐
+### 任务 1.1：移除 `any` 类型 ⭐⭐⭐⭐⭐
 
 **目标：** 消除5处 `any` 类型，提升类型安全
 
@@ -141,7 +86,7 @@ catch (error: unknown) {
 
 ---
 
-### 任务 1.3：统一错误处理机制 ⭐⭐⭐⭐
+### 任务 1.2：统一错误处理机制 ⭐⭐⭐⭐
 
 **目标：** 建立标准化错误类，统一错误处理模式
 
@@ -528,7 +473,7 @@ debug.sync('获取远程数据', { bookmarks: syncdata.bookmarks });
 
 ---
 
-## 阶段三：性能优化（第5-6周）
+## 阶段三：性能优化（第5周）
 
 ### 任务 3.1：CSS 优化 ⭐⭐⭐
 
@@ -784,7 +729,7 @@ function resolveConflicts(
 **验收标准：**
 - [ ] 变更检测准确识别增删改
 - [ ] 合并逻辑正确处理冲突
-- [ ] 测试覆盖率达到 80%
+- [ ] 功能测试通过
 
 ---
 
@@ -794,31 +739,30 @@ function resolveConflicts(
 
 ```
 第1-2周：基础优化
-├── 第1周：添加测试框架 + 开始移除 any 类型
-└── 第2周：完成 any 类型移除 + 统一错误处理
+├── 第1周：移除 any 类型
+└── 第2周：统一错误处理
 
 第3-4周：代码重构
 ├── 第3周：拆分长函数
 └── 第4周：提取常量 + 优化日志
 
-第5-6周：性能优化
-├── 第5周：CSS 优化 + 代码分割
-└── 第6周：实现变更检测 + 合并逻辑
+第5周：性能优化 + 功能实现
+├── CSS 优化 + 代码分割
+└── 实现变更检测 + 合并逻辑
 ```
 
 ### 优先级矩阵
 
 | 任务 | 影响 | 成本 | 优先级 |
 |------|------|------|--------|
-| 添加测试框架 | 高 | 中 | ⭐⭐⭐⭐⭐ |
 | 移除 any 类型 | 高 | 低 | ⭐⭐⭐⭐⭐ |
 | 统一错误处理 | 高 | 中 | ⭐⭐⭐⭐ |
 | 拆分长函数 | 中 | 中 | ⭐⭐⭐⭐ |
+| 实现变更检测 | 高 | 高 | ⭐⭐⭐⭐ |
 | 提取常量 | 中 | 低 | ⭐⭐⭐ |
 | 优化日志 | 低 | 低 | ⭐⭐⭐ |
 | CSS 优化 | 中 | 低 | ⭐⭐⭐ |
 | 代码分割 | 中 | 中 | ⭐⭐⭐ |
-| 实现变更检测 | 高 | 高 | ⭐⭐⭐⭐ |
 
 ---
 
@@ -827,7 +771,6 @@ function resolveConflicts(
 ### 代码质量
 - [ ] TypeScript 严格模式无错误
 - [ ] ESLint 无警告
-- [ ] 测试覆盖率 > 50%
 
 ### 性能
 - [ ] Bundle 大小 < 400KB
@@ -849,7 +792,7 @@ function resolveConflicts(
 
 | 风险 | 概率 | 影响 | 缓解措施 |
 |------|------|------|----------|
-| 重构引入 Bug | 中 | 高 | 添加测试，小步提交 |
+| 重构引入 Bug | 中 | 高 | 小步提交，充分测试 |
 | 变更检测性能问题 | 低 | 中 | 使用 Map 优化，分批处理 |
 | 浏览器兼容性 | 低 | 高 | 保持使用 browser API |
 
@@ -857,13 +800,12 @@ function resolveConflicts(
 
 ## 后续建议
 
-1. **添加 E2E 测试** - 使用 Playwright 测试完整同步流程
-2. **性能监控** - 添加 Sentry 错误追踪
-3. **用户分析** - 添加功能使用统计
-4. **文档网站** - 使用 VitePress 创建文档站点
+1. **性能监控** - 添加 Sentry 错误追踪
+2. **用户分析** - 添加功能使用统计
+3. **文档网站** - 使用 VitePress 创建文档站点
 
 ---
 
-**文档版本:** v1.0  
+**文档版本:** v1.1  
 **最后更新:** 2026-03-12  
 **维护者:** BookmarkHub Team

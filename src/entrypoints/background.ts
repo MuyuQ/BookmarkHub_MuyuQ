@@ -5,6 +5,7 @@ import iconLogo from '../assets/icon.png'
 import { OperType, BookmarkInfo, SyncDataInfo, RootBookmarksType, BrowserType } from '../utils/models'
 import { Bookmarks } from 'wxt/browser'
 import { getBookmarkCount, formatBookmarks as formatBookmarkTree } from '../utils/bookmarkUtils'
+import { BookmarkHubError, createError, handleError } from '../utils/errors'
 export default defineBackground(() => {
 
   browser.runtime.onInstalled.addListener(async c => {
@@ -98,24 +99,23 @@ export default defineBackground(() => {
     }
   })
 
-async function uploadBookmarks() {
+  async function uploadBookmarks() {
     try {
-      let setting = await Setting.build()
-      if (setting.githubToken == '') {
-        throw new Error("GitHub Token 未设置。请在设置页面配置您的 GitHub Personal Access Token。");
+      const setting = await Setting.build();
+      
+      if (!setting.githubToken) {
+        throw createError.authTokenMissing();
       }
-      if (setting.gistID == '') {
-        throw new Error("Gist ID 未设置。请先创建一个 Gist 并在设置页面填入其 ID。");
+      if (!setting.gistID) {
+        throw createError.gistIdMissing();
       }
-      if (setting.gistFileName == '') {
-        throw new Error("Gist 文件名未设置。请在设置页面指定要使用的文件名。");
+      if (!setting.gistFileName) {
+        throw createError.fileNameMissing();
       }
-      let bookmarks = await getBookmarks();
-      let syncdata = new SyncDataInfo();
-      syncdata.version = browser.runtime.getManifest().version;
-      syncdata.createDate = Date.now();
-      syncdata.bookmarks = formatBookmarks(bookmarks);
-      syncdata.browser = navigator.userAgent;
+      
+      const bookmarks = await getBookmarks();
+      const syncdata = createSyncData(bookmarks);
+      
       await BookmarkService.update({
         files: {
           [setting.gistFileName]: {
@@ -124,114 +124,89 @@ async function uploadBookmarks() {
         },
         description: setting.gistFileName
       });
+      
       const count = getBookmarkCount(syncdata.bookmarks);
       await browser.storage.local.set({ remoteCount: count, localCount: count });
       
-      // 通知 popup 刷新数量显示
-      try {
-        browser.runtime.sendMessage({ name: 'refreshCounts' });
-      } catch (e) {
-        // popup 可能未打开，忽略错误
-      }
+      notifyRefreshCounts();
       
       if (setting.enableNotify) {
-        await browser.notifications.create({
-          type: "basic",
-          iconUrl: iconLogo,
-          title: browser.i18n.getMessage('uploadBookmarks'),
-          message: browser.i18n.getMessage('success')
-        });
-      }
-
-    }
-    catch (error: any) {
-      console.error(error);
-      await browser.notifications.create({
-        type: "basic",
-        iconUrl: iconLogo,
-        title: browser.i18n.getMessage('uploadBookmarks'),
-        message: `${browser.i18n.getMessage('error')}：${error.message}`
-      });
-    }
-  }
-  async function downloadBookmarks() {
-    try {
-      let gist = await BookmarkService.get();
-      let setting = await Setting.build()
-      if (gist) {
-        let syncdata: SyncDataInfo = JSON.parse(gist);
-        if (syncdata.bookmarks == undefined || syncdata.bookmarks.length == 0) {
-          if (setting.enableNotify) {
-            await browser.notifications.create({
-              type: "basic",
-              iconUrl: iconLogo,
-              title: browser.i18n.getMessage('downloadBookmarks'),
-              message: `${browser.i18n.getMessage('error')}：Gist File ${setting.gistFileName} is NULL`
-            });
-          }
-          return;
-        }
-        
-        console.log('=== REMOTE DATA ===');
-        console.log('Remote bookmarks raw (top level):', JSON.stringify(syncdata.bookmarks?.map(b => ({title: b.title, childrenCount: b.children?.length || 0}))));
-        
-        await clearBookmarkTree();
-        
-        // 重新获取本地书签状态（此时应该为空或只有根文件夹）
-        const existingBookmarks = await browser.bookmarks.getTree();
-        console.log('=== LOCAL DATA AFTER CLEAR ===');
-        console.log('Local bookmarks count after clear:', getBookmarkCount(existingBookmarks));
-        
-        // 深拷贝远程数据，避免修改原始对象
-        const bookmarksCopy = JSON.parse(JSON.stringify(syncdata.bookmarks));
-        
-        normalizeFolderNames(bookmarksCopy);
-        
-        console.log('Remote bookmarks after normalize:', JSON.stringify((bookmarksCopy as BookmarkInfo[]).map((b: BookmarkInfo) => ({title: b.title, childrenCount: b.children?.length || 0}))));
-        
-        await createBookmarkTree(bookmarksCopy);
-        
-        const localAfter = await browser.bookmarks.getTree();
-        console.log('=== AFTER DOWNLOAD ===');
-        console.log('Local bookmarks count after download:', getBookmarkCount(localAfter));
-        
-        const count = getBookmarkCount(bookmarksCopy);
-        await browser.storage.local.set({ remoteCount: count, localCount: count });
-        
-        // 通知 popup 刷新数量显示
-        try {
-          browser.runtime.sendMessage({ name: 'refreshCounts' });
-        } catch (e) {
-          // popup 可能未打开，忽略错误
-        }
-        
-        if (setting.enableNotify) {
-          await browser.notifications.create({
-            type: "basic",
-            iconUrl: iconLogo,
-            title: browser.i18n.getMessage('downloadBookmarks'),
-            message: browser.i18n.getMessage('success')
-          });
-        }
-      }
-      else {
-        await browser.notifications.create({
-          type: "basic",
-          iconUrl: iconLogo,
-          title: browser.i18n.getMessage('downloadBookmarks'),
-          message: `${browser.i18n.getMessage('error')}：Gist File ${setting.gistFileName} Not Found`
-        });
+        await showSuccessNotification('uploadBookmarks');
       }
     }
     catch (error: unknown) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      console.error(err);
-      await browser.notifications.create({
-        type: "basic",
-        iconUrl: iconLogo,
-        title: browser.i18n.getMessage('downloadBookmarks'),
-        message: `${browser.i18n.getMessage('error')}：${err.message}`
-      });
+      const err = handleError(error);
+      console.error(err.toLogString());
+      await showErrorNotification('uploadBookmarks', err.toUserString());
+    }
+  }
+  
+  function createSyncData(bookmarks: BookmarkInfo[]): SyncDataInfo {
+    const syncdata = new SyncDataInfo();
+    syncdata.version = browser.runtime.getManifest().version;
+    syncdata.createDate = Date.now();
+    syncdata.bookmarks = formatBookmarks(bookmarks);
+    syncdata.browser = navigator.userAgent;
+    return syncdata;
+  }
+  
+  async function notifyRefreshCounts(): Promise<void> {
+    try {
+      browser.runtime.sendMessage({ name: 'refreshCounts' });
+    } catch (e) {
+      // popup 可能未打开，忽略错误
+    }
+  }
+  
+  async function showSuccessNotification(titleKey: 'uploadBookmarks' | 'downloadBookmarks'): Promise<void> {
+    await browser.notifications.create({
+      type: "basic",
+      iconUrl: iconLogo,
+      title: browser.i18n.getMessage(titleKey),
+      message: browser.i18n.getMessage('success')
+    });
+  }
+  
+  async function showErrorNotification(titleKey: 'uploadBookmarks' | 'downloadBookmarks', errorMessage: string): Promise<void> {
+    await browser.notifications.create({
+      type: "basic",
+      iconUrl: iconLogo,
+      title: browser.i18n.getMessage(titleKey),
+      message: `${browser.i18n.getMessage('error')}：${errorMessage}`
+    });
+  }
+  async function downloadBookmarks() {
+    try {
+      const setting = await Setting.build();
+      const gist = await BookmarkService.get();
+      
+      if (!gist) {
+        throw createError.fileNotFound(setting.gistFileName);
+      }
+      
+      const syncdata: SyncDataInfo = JSON.parse(gist);
+      
+      if (!syncdata.bookmarks || syncdata.bookmarks.length === 0) {
+        throw createError.emptyGistFile(setting.gistFileName);
+      }
+      
+      await clearBookmarkTree();
+      normalizeFolderNames(syncdata.bookmarks);
+      await createBookmarkTree(syncdata.bookmarks);
+      
+      const count = getBookmarkCount(syncdata.bookmarks);
+      await browser.storage.local.set({ remoteCount: count, localCount: count });
+      
+      notifyRefreshCounts();
+      
+      if (setting.enableNotify) {
+        await showSuccessNotification('downloadBookmarks');
+      }
+    }
+    catch (error: unknown) {
+      const err = handleError(error);
+      console.error(err.toLogString());
+      await showErrorNotification('downloadBookmarks', err.toUserString());
     }
   }
 

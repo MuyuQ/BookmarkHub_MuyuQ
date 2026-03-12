@@ -147,6 +147,20 @@ export const createError = {
     false
   ),
   
+  fileNotFound: (fileName: string) => new BookmarkHubError(
+    `Gist file not found: ${fileName}`,
+    ErrorCode.VALIDATION_ERROR,
+    `Gist 文件 ${fileName} 不存在`,
+    false
+  ),
+  
+  emptyGistFile: (fileName: string) => new BookmarkHubError(
+    `Gist file is empty: ${fileName}`,
+    ErrorCode.VALIDATION_ERROR,
+    `Gist 文件 ${fileName} 为空`,
+    false
+  ),
+  
   syncFailed: (message: string, originalError?: unknown) => new BookmarkHubError(
     message,
     ErrorCode.SYNC_FAILED,

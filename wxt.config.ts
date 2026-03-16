@@ -12,7 +12,8 @@ export default defineConfig({
     permissions: ['storage', 'bookmarks', 'notifications'],
     host_permissions: ["https://*.github.com/", "https://*.githubusercontent.com/"],
     optional_host_permissions: [
-      "*://*/*",
+      "http://*/*",
+      "https://*/*",
     ]
   }
 });

@@ -4,6 +4,13 @@
  * 所有硬编码值集中定义在此文件
  */
 
+const isProduction = import.meta.env.PROD;
+
+export const ENVIRONMENT = {
+  IS_PRODUCTION: isProduction,
+  DEFAULT_DEBUG_MODE: !isProduction,
+} as const;
+
 // 同步间隔 (毫秒)
 export const SYNC_INTERVALS = {
   ONE_MINUTE: 60 * 1000,

@@ -223,8 +223,40 @@
         "message": "浏览器启动时或书签变动时（新增/修改/删除）自动同步",
         "description": ""
     },
-    "interval720": {
+"interval720": {
         "message": "12小时",
+        "description": ""
+    },
+    "local": {
+        "message": "本地",
+        "description": "本地书签标签"
+    },
+    "remote": {
+        "message": "远程",
+        "description": "远程书签标签"
+    },
+    "validationError": {
+        "message": "设置验证错误",
+        "description": ""
+    },
+    "githubTokenRequired": {
+        "message": "GitHub Token 不能为空",
+        "description": ""
+    },
+    "gistIdRequired": {
+        "message": "Gist ID 不能为空",
+        "description": ""
+    },
+    "webdavUrlRequired": {
+        "message": "WebDAV URL 不能为空",
+        "description": ""
+    },
+    "webdavUsernameRequired": {
+        "message": "WebDAV 用户名不能为空",
+        "description": ""
+    },
+    "webdavPasswordRequired": {
+        "message": "WebDAV 密码不能为空",
         "description": ""
     }
 }

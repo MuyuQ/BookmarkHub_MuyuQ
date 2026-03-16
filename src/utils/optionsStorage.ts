@@ -3,9 +3,16 @@
  * 
  * 使用 webext-options-sync 库管理扩展设置
  * 自动将设置同步到浏览器存储，并在页面加载时自动填充表单
+ * 敏感字段（GitHub Token、WebDAV 密码）使用 AES-GCM 加密
  */
 
 import OptionsSync from 'webext-options-sync';
+import { encrypt, decrypt, isEncrypted } from './crypto';
+import { ValidationError } from './errors';
+import { WEBDAV_DEFAULTS } from './constants';
+
+/** 敏感字段列表 - 这些字段在存储前会被加密 */
+const SENSITIVE_FIELDS = ['githubToken', 'webdavPassword'] as const;
 
 /**
  * 创建 OptionsSync 实例
@@ -15,8 +22,9 @@ import OptionsSync from 'webext-options-sync';
  * - 设置会自动保存到浏览器存储 (browser.storage.local)
  * - 在设置页面中使用 syncForm('#formId') 自动填充表单
  * - 设置变更会自动同步到所有扩展页面
+ * - 敏感字段会自动加密存储
  */
-export default new OptionsSync({
+const optionsStorage = new OptionsSync({
     /**
      * 默认设置值
      * 用户首次安装扩展时使用这些默认值
@@ -32,8 +40,6 @@ export default new OptionsSync({
         gistFileName: 'BookmarkHub',
         /** 是否启用操作完成后的系统通知 */
         enableNotify: true,
-        /** GitHub API 地址 (一般不需要修改) */
-        githubURL: 'https://api.github.com',
 
         // ==================== 自动同步设置 ====================
         
@@ -61,8 +67,8 @@ export default new OptionsSync({
         webdavUsername: '',
         /** WebDAV 密码 */
         webdavPassword: '',
-        /** WebDAV 路径 (如: /bookmarks.json) */
-        webdavPath: '/bookmarks.json',
+        /** WebDAV 路径 (如：/bookmarks.json) */
+        webdavPath: WEBDAV_DEFAULTS.PATH,
     },
 
     /**
@@ -85,3 +91,118 @@ export default new OptionsSync({
      */
     logging: false
 });
+
+/**
+ * 获取所有设置（带解密）
+ * 敏感字段会自动解密
+ * 
+ * @returns Promise<Record<string, unknown>> 包含所有用户配置的记录
+ * @throws {BookmarkHubError} 当解密失败时抛出错误，以区分空值和损坏数据
+ */
+export async function getAllDecrypted(): Promise<Record<string, unknown>> {
+    const options = await optionsStorage.getAll();
+    
+    for (const field of SENSITIVE_FIELDS) {
+        const value = options[field] as string;
+        if (value && isEncrypted(value)) {
+            try {
+                options[field] = await decrypt(value);
+            } catch (error: unknown) {
+                // 解密失败可能是由于：
+                // 1. 加密密钥变更（如扩展重新安装）
+                // 2. 数据损坏
+                // 3. 存储的加密数据格式不正确
+                console.warn(
+                    `[BookmarkHub] 解密失败 - 字段：${field}. ` +
+                    '可能原因：加密密钥变更、数据损坏或凭证错误。' +
+                    '请重新配置相关设置。'
+                );
+                // 保留空字符串以维持向后兼容，但记录警告
+                options[field] = '';
+            }
+        }
+    }
+    
+    return options;
+}
+
+/**
+ * 验证设置值
+ * 在保存到存储之前验证数据的有效性
+ * 
+ * @param options - 要验证的设置对象
+ * @throws {ValidationError} 当验证失败时抛出验证错误
+ */
+function validateOptions(options: Record<string, unknown>): void {
+    // 验证 URL 格式
+    const urlFields = ['webdavUrl'];
+    for (const field of urlFields) {
+        const value = options[field] as string;
+        if (value && typeof value === 'string') {
+            try {
+                // 允许空字符串（未设置的情况）
+                if (value.trim()) {
+                    new URL(value);
+                }
+            } catch {
+                throw new ValidationError(
+                    `Invalid URL format for ${field}: ${value}`,
+                    field,
+                    `${field} 的 URL 格式不正确，请输入完整的 URL（包括 https://）`
+                );
+            }
+        }
+    }
+    
+    // 验证必填字段（非空检查）
+    const requiredFields = ['gistID', 'gistFileName'];
+    for (const field of requiredFields) {
+        const value = options[field] as string;
+        // 如果提供了值但不能为空
+        if (value !== undefined && typeof value === 'string' && value.trim() === '') {
+            throw new ValidationError(
+                `${field} cannot be empty`,
+                field,
+                `${field} 不能为空`
+            );
+        }
+    }
+    
+    // 验证 gistFileName 不能包含非法字符（文件名限制）
+    const gistFileName = options.gistFileName as string;
+    if (gistFileName && typeof gistFileName === 'string' && gistFileName.trim()) {
+        // 检查是否包含路径分隔符或其他危险字符
+        if (/[\/\\:*?"<>|]/.test(gistFileName)) {
+            throw new ValidationError(
+                'gistFileName contains invalid characters',
+                'gistFileName',
+                'gistFileName 不能包含以下字符：/ \\ : * ? " < > |'
+            );
+        }
+    }
+}
+
+/**
+ * 设置值（带加密）
+ * 敏感字段会自动加密
+ * 
+ * @param options - 要设置的设置对象
+ * @throws {ValidationError} 当验证失败时抛出验证错误
+ */
+export async function setEncrypted(options: Record<string, unknown>): Promise<void> {
+    // 在加密之前先验证
+    validateOptions(options);
+    
+    const encryptedOptions = { ...options };
+    
+    for (const field of SENSITIVE_FIELDS) {
+        const value = encryptedOptions[field] as string;
+        if (value && typeof value === 'string' && !isEncrypted(value)) {
+            encryptedOptions[field] = await encrypt(value);
+        }
+    }
+    
+    await optionsStorage.set(encryptedOptions);
+}
+
+export default optionsStorage;

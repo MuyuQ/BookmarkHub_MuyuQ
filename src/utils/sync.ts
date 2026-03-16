@@ -15,6 +15,10 @@ import BookmarkService from './services';
 import { getBookmarks } from './services';
 import { formatBookmarks, getBookmarkCount } from './bookmarkUtils';
 import { webdavRead, webdavWrite } from './webdav';
+import { handleError, createError } from './errors';
+import { logger, logSync } from './logger';
+import { mergeBookmarks as mergeBookmarksImpl, ConflictMode as MergeConflictMode, MergeResult } from './merge';
+import { STORAGE_KEYS } from './constants';
 
 /**
  * 同步模式类型定义
@@ -23,13 +27,6 @@ import { webdavRead, webdavWrite } from './webdav';
  * - hybrid: 混合模式 (同时支持定时和事件)
  */
 export type SyncMode = 'interval' | 'event' | 'hybrid';
-
-/**
- * 冲突处理模式类型定义
- * - auto: 自动合并 (保留最新修改的)
- * - prompt: 弹窗提醒用户
- */
-export type ConflictMode = 'auto' | 'prompt';
 
 /**
  * 定时同步的 timer ID
@@ -42,6 +39,67 @@ let syncTimerId: ReturnType<typeof setInterval> | null = null;
  * 防止同时进行多次同步操作
  */
 let isSyncing: boolean = false;
+
+/**
+ * 事件抑制标志
+ * 在同步操作期间抑制书签事件触发，防止递归同步
+ */
+let isSuppressingEvents: boolean = false;
+
+/**
+ * 获取同步锁状态
+ * @returns 是否正在同步
+ */
+export function getIsSyncing(): boolean {
+    return isSyncing;
+}
+
+/**
+ * 获取事件抑制状态
+ * @returns 是否正在抑制事件
+ */
+export function getIsSuppressingEvents(): boolean {
+    return isSuppressingEvents;
+}
+
+/**
+ * 事件监听器引用
+ * 用于移除监听器，防止内存泄漏
+ * 在同步操作期间检查事件抑制标志，防止递归同步
+ */
+const syncListeners = {
+  onStartup: () => {
+    if (!isSuppressingEvents) {
+      performSync();
+    }
+  },
+  onCreated: () => {
+    if (!isSuppressingEvents) {
+      performSync();
+    }
+  },
+  onChanged: () => {
+    if (!isSuppressingEvents) {
+      performSync();
+    }
+  },
+  onMoved: () => {
+    if (!isSuppressingEvents) {
+      performSync();
+    }
+  },
+  onRemoved: () => {
+    if (!isSuppressingEvents) {
+      performSync();
+    }
+  },
+};
+
+/**
+ * 监听器注册状态
+ * 防止重复注册
+ */
+let listenersRegistered = false;
 
 /**
  * 启动自动同步
@@ -78,31 +136,23 @@ export async function startAutoSync(): Promise<void> {
     }
     
     // 事件触发模式
-    if (setting.enableEventSync) {
+    if (setting.enableEventSync && !listenersRegistered) {
         // 浏览器启动时同步
-        browser.runtime.onStartup.addListener(() => {
-            performSync();
-        });
+        browser.runtime.onStartup.addListener(syncListeners.onStartup);
         
         // 监听书签创建事件
-        browser.bookmarks.onCreated.addListener(() => {
-            performSync();
-        });
+        browser.bookmarks.onCreated.addListener(syncListeners.onCreated);
         
         // 监听书签变更事件
-        browser.bookmarks.onChanged.addListener(() => {
-            performSync();
-        });
+        browser.bookmarks.onChanged.addListener(syncListeners.onChanged);
         
         // 监听书签移动事件
-        browser.bookmarks.onMoved.addListener(() => {
-            performSync();
-        });
+        browser.bookmarks.onMoved.addListener(syncListeners.onMoved);
         
         // 监听书签删除事件
-        browser.bookmarks.onRemoved.addListener(() => {
-            performSync();
-        });
+        browser.bookmarks.onRemoved.addListener(syncListeners.onRemoved);
+        
+        listenersRegistered = true;
     }
 }
 
@@ -114,9 +164,17 @@ export async function startAutoSync(): Promise<void> {
  */
 export function stopAutoSync(): void {
     if (syncTimerId !== null) {
-        // 清除定时器
         clearInterval(syncTimerId);
         syncTimerId = null;
+    }
+    
+    if (listenersRegistered) {
+        browser.runtime.onStartup.removeListener(syncListeners.onStartup);
+        browser.bookmarks.onCreated.removeListener(syncListeners.onCreated);
+        browser.bookmarks.onChanged.removeListener(syncListeners.onChanged);
+        browser.bookmarks.onMoved.removeListener(syncListeners.onMoved);
+        browser.bookmarks.onRemoved.removeListener(syncListeners.onRemoved);
+        listenersRegistered = false;
     }
 }
 
@@ -134,6 +192,7 @@ export function stopAutoSync(): void {
 export async function performSync(): Promise<SyncResult> {
     // 如果正在同步，跳过这次操作
     if (isSyncing) {
+        logSync.skipped('Sync already in progress');
         return {
             direction: 'upload',
             status: 'skipped',
@@ -144,8 +203,10 @@ export async function performSync(): Promise<SyncResult> {
         };
     }
     
-    // 设置同步锁
+    // 设置同步锁和事件抑制标志
     isSyncing = true;
+    isSuppressingEvents = true;
+    logSync.start();
     
     // 初始化结果对象
     const result: SyncResult = {
@@ -168,11 +229,11 @@ export async function performSync(): Promise<SyncResult> {
         const remoteData = await fetchRemoteData(setting);
         const remoteCount = remoteData ? getBookmarkCount(remoteData.bookmarks) : 0;
         
-        // 4. 智能合并书签
-        const mergeResult = await mergeBookmarks(
+        // 4. 智能合并书签 (使用 merge.ts 中的实现)
+        const mergeResult = mergeBookmarksImpl(
             localBookmarks,
             remoteData,
-            setting.conflictMode
+            setting.conflictMode as MergeConflictMode
         );
         
         // 5. 如果有变更，上传合并后的数据
@@ -197,14 +258,17 @@ export async function performSync(): Promise<SyncResult> {
             // popup 可能未打开，忽略错误
         }
         
+        logSync.success(result.remoteCount);
+        
     } catch (error: unknown) {
         // 捕获并记录错误
-        const err = error as Error;
+        const err = handleError(error);
         result.errorMessage = err.message;
-        console.error('Sync failed:', error);
+        logSync.failed(err.toLogString());
     } finally {
-        // 释放同步锁
+        // 释放同步锁和事件抑制标志
         isSyncing = false;
+        isSuppressingEvents = false;
     }
     
     return result;
@@ -273,137 +337,19 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[]): Promise<void> {
 }
 
 /**
- * 合并书签
- * 智能合并本地和远程书签数据
- * 
- * @param local - 本地书签
- * @param remote - 远程同步数据
- * @param conflictMode - 冲突处理模式
- * @returns 合并结果 { merged, hasChanges, conflicts }
- */
-async function mergeBookmarks(
-    local: BookmarkInfo[],
-    remote: SyncDataInfo | null,
-    conflictMode: ConflictMode
-): Promise<{
-    merged: BookmarkInfo[];
-    hasChanges: boolean;
-    conflicts: ConflictInfo[]
-}> {
-    // 冲突列表
-    const conflicts: ConflictInfo[] = [];
-    
-    // 如果没有远程数据，直接返回本地数据
-    if (!remote || !remote.bookmarks) {
-        return { merged: local, hasChanges: false, conflicts };
-    }
-    
-    // 按时间戳合并
-    const merged = mergeByTimestamp(local, remote.bookmarks, conflicts);
-    
-    return {
-        merged,
-        hasChanges: true,
-        conflicts
-    };
-}
-
-/**
- * 按时间戳合并
- * 简化的合并逻辑 (当前版本直接返回本地数据)
- * 
- * TODO: 实现更复杂的合并逻辑
- * - 检测新增书签
- * - 检测删除书签
- * - 检测修改书签
- * - 根据时间戳解决冲突
- * 
- * @param local - 本地书签
- * @param remote - 远程书签
- * @param conflicts - 冲突列表
- * @returns 合并后的书签
- */
-function mergeByTimestamp(
-    local: BookmarkInfo[],
-    remote: BookmarkInfo[],
-    conflicts: ConflictInfo[]
-): BookmarkInfo[] {
-    // 当前实现: 直接返回本地数据
-    // 后续可实现更复杂的合并逻辑
-    return local;
-}
-
-/**
  * 保存同步状态到浏览器本地存储
  * 
  * @param result - 同步结果
  */
 async function saveSyncStatus(result: SyncResult): Promise<void> {
     await browser.storage.local.set({
-        lastSyncTime: result.timestamp,
+        [STORAGE_KEYS.LAST_SYNC_TIME]: result.timestamp,
         lastSyncDirection: result.direction,
-        lastSyncStatus: result.status,
-        lastSyncError: result.errorMessage || '',
-        localCount: result.localCount,
-        remoteCount: result.remoteCount
+        [STORAGE_KEYS.LAST_SYNC_STATUS]: result.status,
+        [STORAGE_KEYS.LAST_SYNC_ERROR]: result.errorMessage || '',
+        [STORAGE_KEYS.LOCAL_COUNT]: result.localCount,
+        [STORAGE_KEYS.REMOTE_COUNT]: result.remoteCount
     });
-}
-
-/**
- * 书签变更记录
- * 用于追踪书签的变化
- */
-export interface BookmarkChange {
-    /** 变更类型 */
-    type: 'created' | 'modified' | 'deleted';
-    /** 变更的书签 */
-    bookmark: BookmarkInfo;
-    /** 变更时间戳 */
-    timestamp: number;
-}
-
-/**
- * 检测书签变更
- * 预留的变更检测函数
- * 
- * TODO: 实现完整的变更检测逻辑
- * 
- * @param oldBookmarks - 旧书签数据
- * @param newBookmarks - 新书签数据
- * @returns 变更列表
- */
-function detectChanges(
-    oldBookmarks: BookmarkInfo[],
-    newBookmarks: BookmarkInfo[]
-): BookmarkChange[] {
-    const changes: BookmarkChange[] = [];
-    // TODO: 实现变更检测
-    return changes;
-}
-
-/**
- * 解决冲突
- * 根据冲突模式解决本地和远程的冲突
- * 
- * @param local - 本地书签
- * @param remote - 远程书签
- * @param mode - 冲突处理模式
- * @returns 解决后的书签
- */
-function resolveConflict(
-    local: BookmarkInfo,
-    remote: BookmarkInfo,
-    mode: ConflictMode
-): BookmarkInfo {
-    // 自动模式: 保留最新修改的
-    if (mode === 'auto') {
-        const localTime = local.dateAdded || 0;
-        const remoteTime = remote.dateAdded || 0;
-        return localTime > remoteTime ? local : remote;
-    }
-    
-    // 默认返回本地数据
-    return local;
 }
 
 /**

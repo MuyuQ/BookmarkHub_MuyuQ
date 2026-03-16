@@ -16,7 +16,10 @@ import { getBookmarkCount, formatBookmarks } from './bookmarkUtils';
 import { retryOperation } from './retry';
 
 // 重新导出工具函数，保持向后兼容
-export { getBookmarkCount, formatBookmarks };
+/** @deprecated Use getBookmarkCount from './bookmarkUtils' directly */
+export { getBookmarkCount };
+/** @deprecated Use formatBookmarks from './bookmarkUtils' directly */
+export { formatBookmarks };
 
 /**
  * GitHub Gist 文件接口
@@ -42,6 +45,16 @@ export interface GistResponse {
 export interface GistUpdateData {
   files: Record<string, { content: string }>;
   description?: string;
+}
+
+/**
+ * GitHub Gist 列表响应接口
+ */
+export interface GistListResponse {
+  id: string;
+  description: string | null;
+  public: boolean;
+  files: Record<string, { filename: string; raw_url: string }>;
 }
 
 /**
@@ -89,11 +102,9 @@ class BookmarkService {
     /**
      * 获取用户的所有 Gist 列表
      * 
-     * @returns Promise<any> Gist 列表响应
-     * 
-     * 注意: 此方法可能不需要，因为是私有 Gist
+     * @returns Promise<GistListResponse[]> Gist 列表响应
      */
-    async getAllGist(): Promise<any> {
+    async getAllGist(): Promise<GistListResponse[]> {
         return http.get('gists').json();
     }
 

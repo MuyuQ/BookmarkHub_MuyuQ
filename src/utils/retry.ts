@@ -71,7 +71,7 @@ export async function retryOperation<T>(
     let lastError: Error | undefined;
     let delay = initialDelay;
     
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
             const result = await operation();
             
@@ -100,8 +100,10 @@ export async function retryOperation<T>(
             // 等待一段时间后重试
             await sleep(delay);
             
-            // 计算下一次延迟（指数退避）
-            delay = Math.min(delay * backoffFactor, maxDelay);
+            // 计算下一次延迟（指数退避 + 随机抖动）
+            // 添加 ±25% 的随机抖动，防止多个客户端同时重试导致的"惊群效应"
+            const jitter = delay * 0.25 * (Math.random() * 2 - 1); // ±25% jitter
+            delay = Math.min(delay * backoffFactor + jitter, maxDelay);
         }
     }
     
@@ -133,18 +135,22 @@ export async function retryFetch(
     return retryOperation(
         async () => {
             const response = await fetch(url, init);
-            
-            // 对于某些HTTP状态码不进行重试（如401、403、404）
+            // HTTP 错误处理：区分可重试和不可重试的错误
             if (!response.ok) {
                 const status = response.status;
                 
-                // 客户端错误（4xx）不重试
+                // 429 速率限制：需要重试，使用退避策略
+                if (status === 429) {
+                    throw new Error(`HTTP ${status}: Rate limited, will retry`);
+                }
+                
+                // 其他客户端错误（4xx）不重试，直接抛出
                 if (status >= 400 && status < 500) {
-                    throw new Error(`HTTP ${status}: ${response.statusText}`);
+                    throw new Error(`HTTP ${status}: Client error, no retry`);
                 }
                 
                 // 服务器错误（5xx）可以重试
-                throw new Error(`HTTP ${status}: ${response.statusText}`);
+                throw new Error(`HTTP ${status}: Server error, will retry`);
             }
             
             return response;

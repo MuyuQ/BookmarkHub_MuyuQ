@@ -15,8 +15,26 @@
 | `webdav.ts` | WebDAV client | `WebDAVClient`, `webdavRead`, `webdavWrite` |
 | `http.ts` | HTTP client | `http` (ky wrapper with GitHub auth) |
 | `retry.ts` | Retry logic | `retryOperation` (3 retries, exponential backoff) |
+| `errors.ts` | Error handling | `BookmarkHubError`, `ErrorCode`, `createError` |
 | `importer.ts` | Import bookmarks | `importBookmarks` (JSON/HTML) |
 | `exporter.ts` | Export bookmarks | `exportBookmarks` (JSON/HTML) |
+| `logger.ts` | Logging | `logger`, `logSync`, `logWebDAV` |
+
+## Dependency Graph
+
+```
+optionsStorage.ts ← setting.ts ←─┬── services.ts ← sync.ts
+                                 │        ↑
+                                 │      http.ts
+                                 │        ↑
+                                 │     retry.ts
+                                 │
+                                 ├── webdav.ts ← sync.ts
+                                 │
+                                 └── bookmarkUtils.ts
+                                         ↑
+                                    models.ts (shared everywhere)
+```
 
 ## Key Patterns
 
@@ -37,26 +55,47 @@ import { retryOperation } from './retry'
 await retryOperation(() => api.call(), { maxRetries: 3, logRetries: true })
 ```
 
-## Architecture
-
+### Error Handling
+```typescript
+import { handleError, createError } from './errors'
+catch (error: unknown) {
+    const err = handleError(error)
+    console.error(err.toLogString())
+}
 ```
-Setting.build() → optionsStorage.getAll()
-                 ↓
-BookmarkService ← http (ky) ← retryOperation
-       ↓
-sync.ts ← webdav.ts
-       ↓
-background.ts
+
+## Internal Patterns
+
+### Conflict Prevention
+- `OperType` enum marks current operation state
+- `isSyncing` lock in `sync.ts` prevents concurrent syncs
+- Bookmark events ignored during sync operations
+
+### Storage Backend Selection
+- `storageType` setting controls backend: `'github'` | `'webdav'`
+- Both backends share same data format (SyncDataInfo)
+- `fetchRemoteData()` in sync.ts abstracts backend choice
+
+### Message Flow
+```
+Popup/Options → browser.runtime.sendMessage({ name: 'upload' })
+                    ↓
+              background.ts → uploadBookmarks()
+                    ↓
+              services.ts/webdav.ts → remote storage
 ```
 
 ## TODO (Unimplemented)
 
-- `sync.ts:315` - Complex merge logic (detect add/delete/modify)
-- `sync.ts:369` - Change detection logic
-- `sync.ts:380` - Change detection implementation
+| Location | Description |
+|----------|-------------|
+| `sync.ts:315` | Complex merge logic (detect add/delete/modify) |
+| `sync.ts:369` | Change detection logic |
+| `sync.ts:380` | Change detection implementation |
 
 ## Notes
 
 - `bookmarkUtils.ts` is the **canonical source** for bookmark utilities
 - `services.ts` re-exports for backward compatibility only
 - Chinese comments are acceptable in this codebase
+- No test coverage exists yet

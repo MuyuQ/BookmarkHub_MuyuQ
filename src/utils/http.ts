@@ -7,6 +7,7 @@
 
 import ky from 'ky';
 import { Setting } from './setting';
+import { HTTP_TIMEOUTS } from './constants';
 
 /**
  * 创建配置好的 ky HTTP 实例
@@ -32,12 +33,18 @@ export const http = ky.create({
     prefixUrl: 'https://api.github.com',
     
     // 请求超时时间 (毫秒)
-    // 60秒超时，防止请求无限等待
-    timeout: 60000,
+    // 60 秒超时，防止请求无限等待
+    timeout: HTTP_TIMEOUTS.GITHUB_API,
     
     // 请求失败后的重试次数
-    // 设为1次，即失败后重试一次
-    retry: 1,
+    // 设为 1 次，即失败后重试一次
+    retry: {
+        limit: 1,
+        // 自定义重试逻辑
+        methods: ['get', 'put', 'post', 'delete', 'patch'],
+        statusCodes: [408, 413, 429, 500, 502, 503, 504],
+        afterStatusCodes: [429], // 429 需要特殊处理速率限制
+    },
     
     // 请求钩子函数
     // 在每次请求发送前执行
@@ -67,6 +74,55 @@ export const http = ky.create({
                 // 禁用缓存
                 // 确保获取最新数据，不使用浏览器缓存
                 request.headers.set('cache', 'no-store');
+            }
+        ],
+        beforeRetry: [
+            /**
+             * 重试前钩子
+             * 处理 GitHub API 的速率限制
+             */
+            async () => {
+                // 速率限制已在 afterResponse 钩子中处理
+                // 这里仅用于记录重试
+                console.log('请求重试中...');
+            }
+        ],
+        afterResponse: [
+            /**
+             * 响应后钩子
+             * 处理 GitHub API 的速率限制
+             */
+            async (_request, _options, response) => {
+                // 检查是否是速率限制 (403 或 429)
+                if (response.status === 403 || response.status === 429) {
+                    // 检查速率限制头
+                    const remaining = response.headers.get('X-RateLimit-Remaining');
+                    const reset = response.headers.get('X-RateLimit-Reset');
+                    
+                    // 如果剩余次数为 0 且有重置时间
+                    if (remaining === '0' && reset) {
+                        const resetTime = parseInt(reset, 10) * 1000;
+                        const now = Date.now();
+                        const waitTime = Math.max(resetTime - now, 0);
+                        
+                        console.warn(`GitHub API 速率限制，等待 ${Math.ceil(waitTime / 1000)} 秒后重试`);
+                        
+                        // 等待直到速率限制重置
+                        if (waitTime > 0) {
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                        }
+                        
+                        // 抛出错误以触发重试
+                        throw new Error('Rate limit exceeded, waiting for reset');
+                    } else if (response.status === 429) {
+                        // 通用 429 处理，等待 60 秒
+                        console.warn('GitHub API 返回 429，等待 60 秒后重试');
+                        await new Promise(resolve => setTimeout(resolve, 60000));
+                        throw new Error('Rate limited (429), waiting before retry');
+                    }
+                }
+                
+                return response;
             }
         ]
     }

@@ -6,7 +6,8 @@
  */
 
 import { Options } from 'webext-options-sync';
-import optionsStorage from './optionsStorage';
+import { getAllDecrypted } from './optionsStorage';
+import { WEBDAV_DEFAULTS } from './constants';
 
 /**
  * 设置基类
@@ -37,8 +38,6 @@ export class SettingBase implements Options {
     gistFileName: string = 'BookmarkHub';
     /** 是否启用通知 */
     enableNotify: boolean = true;
-    /** GitHub API 地址 */
-    githubURL: string = 'https://api.github.com';
 
     // ==================== 自动同步设置 ====================
 
@@ -67,7 +66,7 @@ export class SettingBase implements Options {
     /** WebDAV 密码 */
     webdavPassword: string = '';
     /** WebDAV 路径 */
-    webdavPath: string = '/bookmarks.json';
+    webdavPath: string = WEBDAV_DEFAULTS.PATH;
 }
 
 /**
@@ -102,17 +101,17 @@ export class Setting extends SettingBase {
      *   }
      */
     static async build(): Promise<Setting> {
-        // 从存储获取所有设置
-        const options = await optionsStorage.getAll();
+        // 从存储获取所有设置（敏感字段已解密）
+        const options = await getAllDecrypted();
         
         // 创建新的 Setting 实例
         const setting = new Setting();
         
         // 复制 GitHub Gist 相关设置
-        setting.gistID = options.gistID;
-        setting.gistFileName = options.gistFileName;
-        setting.githubToken = options.githubToken;
-        setting.enableNotify = options.enableNotify;
+        setting.gistID = options.gistID as string;
+        setting.gistFileName = options.gistFileName as string;
+        setting.githubToken = options.githubToken as string;
+        setting.enableNotify = options.enableNotify as boolean;
         
         // 复制自动同步设置 (使用类型断言确保类型安全)
         setting.enableAutoSync = Boolean(options.enableAutoSync);
@@ -124,41 +123,12 @@ export class Setting extends SettingBase {
         // 复制存储服务设置
         setting.storageType = (options.storageType as 'github' | 'webdav') || 'github';
         
-        // 复制 WebDAV 设置
-        setting.webdavUrl = options.webdavUrl;
-        setting.webdavUsername = options.webdavUsername;
-        setting.webdavPassword = options.webdavPassword;
-        setting.webdavPath = options.webdavPath;
+        // 复制 WebDAV 设置 (密码已解密)
+        setting.webdavUrl = options.webdavUrl as string;
+        setting.webdavUsername = options.webdavUsername as string;
+        setting.webdavPassword = options.webdavPassword as string;
+        setting.webdavPath = options.webdavPath as string;
         
         return setting;
     }
 }
-
-
-/**
- * 旧版本代码 (已注释)
- * 保留作为参考
- */
-
-// export class SettingBase {
-//     constructor() { }
-//     [key: string]: string | number | boolean;
-//     githubToken: string = '';
-//     gistID: string = '';
-//     gistFileName: string = 'BookmarkHub';
-//     enableNotify: boolean = true;
-//     githubURL: string = 'https://api.github.com';
-// }
-
-// export class Setting extends SettingBase {
-//     private constructor() { super() }
-//     static async build() {
-//         let options = new Setting();
-//         let setting = new Setting();
-//         setting.gistID = options.gistID;
-//         setting.gistFileName = options.gistFileName;
-//         setting.githubToken = options.githubToken;
-//         setting.enableNotify = options.enableNotify;
-//         return setting;
-//     }
-// }

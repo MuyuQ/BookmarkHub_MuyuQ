@@ -4,12 +4,11 @@ import { Dropdown, Badge } from 'react-bootstrap';
 import { IconContext } from 'react-icons'
 import {
     AiOutlineCloudUpload, AiOutlineCloudDownload,
-    AiOutlineCloudSync, AiOutlineSetting,
-    AiOutlineInfoCircle, AiOutlineGithub, AiOutlineExport, AiOutlineImport
+    AiOutlineSetting,
+    AiOutlineExport, AiOutlineImport
 } from 'react-icons/ai'
 import { exportBookmarks } from '../../utils/exporter'
 import { importBookmarks } from '../../utils/importer'
-import { BookmarkInfo } from '../../utils/models'
 import { flattenBookmarks } from '../../utils/bookmarkUtils'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './popup.css'
@@ -18,24 +17,26 @@ const Popup: React.FC = () => {
     const [count, setCount] = useState({ local: "0", remote: "0" })
     
     useEffect(() => {
-        document.addEventListener('click', (e: MouseEvent) => {
+        const handleClick = (e: MouseEvent) => {
             let elem = e.target as HTMLInputElement;
             if (elem != null && elem.className === 'dropdown-item') {
                 elem.setAttribute('disabled', 'disabled');
                 browser.runtime.sendMessage({ name: elem.name })
-                    .then((res) => {
+                    .then(() => {
                         elem.removeAttribute('disabled');
-                        console.log("msg", Date.now())
                     })
-                    .catch(c => {
-                        console.log("error", c)
-                    });
+                    .catch(() => {});
             }
-        });
+        };
+        document.addEventListener('click', handleClick);
+        
+        return () => {
+            document.removeEventListener('click', handleClick);
+        };
     }, [])
     
     useEffect(() => {
-        let getSetting = async () => {
+        const getSetting = async () => {
             let data = await browser.storage.local.get(["localCount", "remoteCount"]);
             setCount({ 
                 local: String(data["localCount"] || 0), 
@@ -45,7 +46,7 @@ const Popup: React.FC = () => {
         getSetting();
         
         // 监听同步完成消息，刷新数量显示
-        const handleMessage = (message: any) => {
+        const handleMessage = (message: { name: string }) => {
             if (message.name === 'refreshCounts') {
                 getSetting();
             }
@@ -101,14 +102,14 @@ const Popup: React.FC = () => {
                 </Dropdown.Item>
                 <Dropdown.Divider />
                 <Dropdown.Item name='setting' as="button"><AiOutlineSetting />{browser.i18n.getMessage('settings')}</Dropdown.Item>
-                    <div className="footer-bar">
+<div className="footer-bar">
                     <span className="count-info">
                         <Badge id="localCount" variant="light" title={browser.i18n.getMessage('localCount')}>
-                          本地: {count["local"]}
+                          {browser.i18n.getMessage('local')}: {count["local"]}
                         </Badge>
                         <span className="count-separator" style={{ margin: '0 8px' }}>/</span>
                         <Badge id="remoteCount" variant="light" title={browser.i18n.getMessage('remoteCount')}>
-                          远程: {count["remote"]}
+                          {browser.i18n.getMessage('remote')}: {count["remote"]}
                         </Badge>
                     </span>
                     </div>

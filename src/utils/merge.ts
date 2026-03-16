@@ -126,28 +126,32 @@ function applyChanges(
 ): BookmarkInfo[] {
   const result: BookmarkInfo[] = JSON.parse(JSON.stringify(base));
   
+  const lostToRemote = (bookmarkId: string): boolean => {
+    const resolution = resolved.find(r => r.local.bookmark.id === bookmarkId);
+    return resolution !== undefined && resolution.winner === 'remote';
+  };
+  
   for (const change of localChanges.created) {
-    const shouldApply = !resolved.find(r => 
-      r.local.bookmark.id === change.bookmark.id && r.winner === 'remote'
-    );
-    if (shouldApply) {
+    if (!lostToRemote(change.bookmark.id!)) {
       addBookmarkToTree(result, change.bookmark);
     }
   }
   
   for (const change of localChanges.modified) {
-    const resolution = resolved.find(r => r.local.bookmark.id === change.bookmark.id);
-    if (!resolution || resolution.winner !== 'remote') {
+    if (!lostToRemote(change.bookmark.id!)) {
       updateBookmarkInTree(result, change.bookmark);
     }
   }
   
   for (const change of localChanges.deleted) {
-    const shouldDelete = !resolved.find(r => 
-      r.local.bookmark.id === change.bookmark.id && r.winner === 'remote'
-    );
-    if (shouldDelete) {
-      removeBookmarkFromTree(result, change.bookmark.id!);
+    if (!lostToRemote(change.bookmark.id!) && change.bookmark.id) {
+      removeBookmarkFromTree(result, change.bookmark.id);
+    }
+  }
+  
+  for (const change of localChanges.moved) {
+    if (!lostToRemote(change.bookmark.id!)) {
+      updateBookmarkInTree(result, change.bookmark);
     }
   }
   
@@ -168,7 +172,8 @@ function addBookmarkToTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {
 }
 
 function updateBookmarkInTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {
-  const existing = findBookmarkById(tree, bookmark.id!);
+  if (!bookmark.id) return;
+  const existing = findBookmarkById(tree, bookmark.id);
   if (existing) {
     Object.assign(existing, bookmark);
   }
@@ -180,8 +185,9 @@ function removeBookmarkFromTree(tree: BookmarkInfo[], id: string): void {
       tree.splice(i, 1);
       return;
     }
-    if (tree[i].children) {
-      removeBookmarkFromTree(tree[i].children!, id);
+    const children = tree[i].children;
+    if (children) {
+      removeBookmarkFromTree(children, id);
     }
   }
 }

@@ -8,6 +8,7 @@
 
 import { Setting } from './setting';
 import { retryOperation } from './retry';
+import { logger } from './logger';
 
 /**
  * WebDAV 客户端类
@@ -27,19 +28,43 @@ export class WebDAVClient {
     private username: string;
     /** 密码 */
     private password: string;
+    /** 默认 Content-Type */
+    private contentType: string;
 
     /**
      * 构造函数
      * 
-     * @param baseUrl - WebDAV 服务器地址 (如: https://your-nas.com/remote.php/dav/files/username/)
+     * @param baseUrl - WebDAV 服务器地址 (如：https://your-nas.com/remote.php/dav/files/username/)
      * @param username - 用户名
      * @param password - 密码
+     * @param contentType - 可选的 Content-Type，默认 'application/json'
      */
-    constructor(baseUrl: string, username: string, password: string) {
+    constructor(baseUrl: string, username: string, password: string, contentType: string = 'application/json') {
+        // 验证 URL 格式
+        if (!baseUrl || typeof baseUrl !== 'string') {
+            throw new Error('WebDAV URL is required and must be a string');
+        }
+        
+        // 检查 URL 协议
+        if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+            throw new Error('WebDAV URL must start with http:// or https://');
+        }
+        
+        // 验证用户名
+        if (!username || typeof username !== 'string' || username.trim() === '') {
+            throw new Error('WebDAV username is required and must be non-empty');
+        }
+        
+        // 验证密码 (允许空字符串作为密码，但必须是字符串)
+        if (password === undefined || password === null || typeof password !== 'string') {
+            throw new Error('WebDAV password is required and must be a string');
+        }
+        
         // 移除末尾的斜杠，保持 URL 格式一致
         this.baseUrl = baseUrl.replace(/\/$/, '');
         this.username = username;
         this.password = password;
+        this.contentType = contentType;
     }
 
     /**
@@ -68,8 +93,7 @@ export class WebDAVClient {
                 const response = await fetch(`${this.baseUrl}${path}`, {
                     method: 'GET',
                     headers: {
-                        'Authorization': this.getAuthHeader(),
-                        'Content-Type': 'application/json'
+                        'Authorization': this.getAuthHeader()
                     }
                 });
 
@@ -80,7 +104,7 @@ export class WebDAVClient {
                 return await response.text();
             }, { maxRetries: 3, logRetries: true });
         } catch (error) {
-            console.error('WebDAV read error:', error);
+            logger.error('WebDAV read error', error);
             return null;
         }
     }
@@ -92,16 +116,17 @@ export class WebDAVClient {
      * 
      * @param path - 文件路径
      * @param content - 文件内容
+     * @param contentType - 可选的 Content-Type，覆盖构造函数中的默认值
      * @returns Promise<boolean> 是否成功
      */
-    async write(path: string, content: string): Promise<boolean> {
+    async write(path: string, content: string, contentType?: string): Promise<boolean> {
         try {
             return await retryOperation(async () => {
                 const response = await fetch(`${this.baseUrl}${path}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': this.getAuthHeader(),
-                        'Content-Type': 'application/json'
+                        'Content-Type': contentType ?? this.contentType
                     },
                     body: content
                 });
@@ -113,7 +138,7 @@ export class WebDAVClient {
                 return true;
             }, { maxRetries: 3, logRetries: true });
         } catch (error) {
-            console.error('WebDAV write error:', error);
+            logger.error('WebDAV write error', error);
             return false;
         }
     }
@@ -137,6 +162,34 @@ export class WebDAVClient {
 
             return response.ok;
         } catch {
+            return false;
+        }
+    }
+
+    /**
+     * 删除文件
+     * 使用 WebDAV DELETE 方法删除文件
+     * 支持自动重试
+     * 
+     * @param path - 文件路径
+     * @returns Promise<boolean> 是否成功
+     */
+    async remove(path: string): Promise<boolean> {
+        try {
+            return await retryOperation(async () => {
+                const response = await fetch(`${this.baseUrl}${path}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': this.getAuthHeader()
+                    }
+                });
+
+                // 204 No Content 表示删除成功
+                // 404 表示文件不存在，也视为成功 (幂等性)
+                return response.ok || response.status === 404;
+            }, { maxRetries: 3, logRetries: true });
+        } catch (error) {
+            logger.error('WebDAV delete error', error);
             return false;
         }
     }
@@ -244,8 +297,11 @@ export async function testWebDAVConnection(
             return { success: false, message: 'Failed to read test file' };
         }
 
-        // 3. 清理测试文件
-        await client.write(testPath, '');
+        // 3. 删除测试文件
+        const deleteResult = await client.remove(testPath);
+        if (!deleteResult) {
+            return { success: false, message: 'Failed to delete test file' };
+        }
 
         // 4. 返回成功
         return { success: true, message: 'Connection successful' };

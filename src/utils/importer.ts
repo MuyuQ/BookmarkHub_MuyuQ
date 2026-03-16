@@ -161,9 +161,9 @@ function parseDlElement(element: Element, parent: BookmarkInfo[]): void {
 
                 // 查找直接的子 DL 元素 (子文件夹)
                 const dl = child.querySelector(':scope > DL');
-                if (dl) {
+                if (dl && folder.children) {
                     // 递归解析子文件夹
-                    parseDlElement(dl, folder.children!);
+                    parseDlElement(dl, folder.children);
                 }
 
                 parent.push(folder);

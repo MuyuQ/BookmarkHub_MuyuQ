@@ -67,14 +67,20 @@ export function detectChanges(
     } else {
       const oldBookmark = oldMap.get(id)!;
       if (hasChanged(oldBookmark, bookmark)) {
-        if (isMoved(oldBookmark, bookmark)) {
+        const movedChange = isMoved(oldBookmark, bookmark);
+        const modifiedChange = oldBookmark.title !== bookmark.title ||
+                               oldBookmark.url !== bookmark.url;
+        
+        if (movedChange) {
           moved.push({
             type: 'moved',
             bookmark,
             previous: oldBookmark,
             timestamp: now,
           });
-        } else {
+        }
+        
+        if (modifiedChange) {
           modified.push({
             type: 'modified',
             bookmark,

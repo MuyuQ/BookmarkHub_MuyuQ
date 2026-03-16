@@ -255,8 +255,40 @@
         "message": "Sync when browser starts or bookmarks change (create/modify/delete)",
         "description": ""
     },
-    "interval720": {
+"interval720": {
         "message": "12 hours",
+        "description": ""
+    },
+    "local": {
+        "message": "Local",
+        "description": "Local bookmarks label"
+    },
+    "remote": {
+        "message": "Remote",
+        "description": "Remote bookmarks label"
+    },
+    "validationError": {
+        "message": "Validation Error",
+        "description": "Validation error header"
+    },
+    "githubTokenRequired": {
+        "message": "GitHub Token cannot be empty",
+        "description": ""
+    },
+    "gistIdRequired": {
+        "message": "Gist ID cannot be empty",
+        "description": ""
+    },
+    "webdavUrlRequired": {
+        "message": "WebDAV URL cannot be empty",
+        "description": ""
+    },
+    "webdavUsernameRequired": {
+        "message": "WebDAV Username cannot be empty",
+        "description": ""
+    },
+    "webdavPasswordRequired": {
+        "message": "WebDAV Password cannot be empty",
         "description": ""
     }
 }

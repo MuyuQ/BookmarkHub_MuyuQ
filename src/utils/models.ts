@@ -19,7 +19,7 @@
  */
 export class BookmarkInfo {
     /** 书签唯一标识符 */
-    id?: string | undefined = "";
+    id?: string;
     /** 父文件夹ID */
     parentId?: string | undefined;
     /** 在父文件夹中的索引位置 */
@@ -39,16 +39,47 @@ export class BookmarkInfo {
     /** 子书签/子文件夹列表 (仅文件夹类型有效) */
     children?: BookmarkInfo[] | undefined;
 
-    /**
-     * 构造函数
-     * @param title - 书签标题
-     * @param url - 书签URL (可选)
-     * @param children - 子节点数组 (可选)
-     */
     public constructor(title: string, url?: string, children?: BookmarkInfo[]) {
         this.title = title;
         this.url = url;
         this.children = children;
+    }
+
+    // P1-18: Safe URL protocols for bookmarks
+    private static readonly SAFE_PROTOCOLS = ['http:', 'https:', 'ftp:', 'ftps:', 'chrome:', 'about:', 'edge:'];
+
+    // P1-18: Validate bookmark data
+    static validate(data: Partial<BookmarkInfo>): boolean {
+        if (!data.title || typeof data.title !== 'string') return false;
+        if (data.url !== undefined && data.url !== null && typeof data.url !== 'string') return false;
+        if (data.children !== undefined && !Array.isArray(data.children)) return false;
+        if (data.url && data.url.trim()) {
+            try {
+                const parsed = new URL(data.url);
+                if (!BookmarkInfo.SAFE_PROTOCOLS.includes(parsed.protocol)) return false;
+            } catch {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // P1-18: Create BookmarkInfo with validation, returns null if invalid
+    static createSafe(data: Partial<BookmarkInfo>): BookmarkInfo | null {
+        if (!BookmarkInfo.validate(data)) return null;
+        const bookmark = new BookmarkInfo(
+            data.title || '',
+            data.url,
+            data.children
+        );
+        if (data.id) bookmark.id = data.id;
+        if (data.parentId) bookmark.parentId = data.parentId;
+        if (data.index !== undefined) bookmark.index = data.index;
+        if (data.dateAdded) bookmark.dateAdded = data.dateAdded;
+        if (data.dateGroupModified) bookmark.dateGroupModified = data.dateGroupModified;
+        if (data.unmodifiable) bookmark.unmodifiable = data.unmodifiable;
+        if (data.type) bookmark.type = data.type;
+        return bookmark;
     }
 }
 
@@ -215,4 +246,44 @@ export interface ConflictInfo {
     localBookmark?: BookmarkInfo;
     /** 远程书签信息 (可选) */
     remoteBookmark?: BookmarkInfo;
+}
+
+/**
+ * 浏览器信息接口
+ * 用于标识使用数据来源的浏览器和操作系统
+ */
+export interface BrowserInfo {
+    /** 浏览器名称 (e.g. Chrome, Firefox, Edge) */
+    browser: string;
+    /** 操作系统 (e.g. Windows, macOS, Linux) */
+    os: string;
+}
+
+/**
+ * 备份记录接口
+ * 表示一次书签备份的历史记录
+ */
+export interface BackupRecord {
+    /** 备份时间戳 */
+    backupTimestamp: number;
+    /** 快照时间的备份书签数据 */
+    bookmarkData: BookmarkInfo[];
+    /** 备份的书签数量 */
+    bookmarkCount: number;
+}
+
+/**
+ * 同步数据接口 (新格式)
+ * 用于存储带有历史记录的同步数据
+ * 替代原有的 SyncDataInfo 类
+ */
+export interface SyncData {
+    /** 数据格式版本 (e.g. "2.0") */
+    version: string;
+    /** 最后同步时间戳 */
+    lastSyncTimestamp: number;
+    /** 上次同步的源浏览器信息 */
+    sourceBrowser: BrowserInfo;
+    /** 备份记录数组（按时间倒序排列，最新在第一位） */
+    backupRecords: BackupRecord[];
 }

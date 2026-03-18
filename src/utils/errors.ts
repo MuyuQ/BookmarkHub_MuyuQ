@@ -38,6 +38,8 @@ export enum ErrorCode {
   GIST_FILE_TRUNCATED = 'GIST_FILE_TRUNCATED',
   /** 同步数据损坏或格式错误 */
   SYNC_DATA_CORRUPTED = 'SYNC_DATA_CORRUPTED',
+  /** 数据格式无效 */
+  INVALID_DATA_FORMAT = 'INVALID_DATA_FORMAT',
   
   // 同步错误
   /** 同步操作失败 */
@@ -219,6 +221,13 @@ export const createError = {
     `Sync data is corrupted: ${source}`,
     ErrorCode.SYNC_DATA_CORRUPTED,
     `同步数据已损坏：${source === 'remote' ? '远程数据' : '本地数据'}，请检查数据完整性`,
+    false
+  ),
+  
+  invalidDataFormat: () => new BookmarkHubError(
+    'Invalid data format',
+    ErrorCode.INVALID_DATA_FORMAT,
+    '远程数据格式无效，无法解析书签数据',
     false
   ),
   

@@ -9,6 +9,7 @@ import { getBookmarkCount, formatBookmarks } from '../utils/bookmarkUtils'
 import { createError, handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
 import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS } from '../utils/constants'
+import { getBackupRecords, restoreFromBackup, deleteBackupRecord } from '../utils/localCache'
 
 export default defineBackground(() => {
 
@@ -38,6 +39,13 @@ export default defineBackground(() => {
   });
 
   /**
+   * P1-9: Validate message sender to prevent cross-extension attacks
+   */
+  function isValidSender(sender: chrome.runtime.MessageSender): boolean {
+    return !sender.id || sender.id === browser.runtime.id;
+  }
+
+  /**
    * 操作锁 - 防止多个异步消息处理程序交错执行
    * 使用 Promise 队列确保操作顺序执行
    */
@@ -50,11 +58,11 @@ export default defineBackground(() => {
   let curOperType = OperType.NONE;
   let curBrowserType = BrowserType.CHROME;
   
-  /**
-   * 在操作队列中添加操作，确保顺序执行
-   * @param operation - 要执行的操作函数
-   * @returns 操作结果的 Promise
-   */
+/**
+    * 在操作队列中添加操作，确保顺序执行
+    * @param operation - 要执行的操作函数
+    * @returns 操作结果的 Promise
+    */
   function queueOperation<T>(operation: () => Promise<T>): Promise<T> {
     let resolveFunc: (result: T) => void;
     let rejectFunc: (error: unknown) => void;
@@ -71,14 +79,21 @@ export default defineBackground(() => {
       } catch (error) {
         rejectFunc(error);
       }
-    }).catch(() => {
-      // 错误已在 operation 中处理
+    }).catch((error) => {
+      // P1-10: Log error but don't block queue continuation
+      logger.error('Operation queue error', error);
     });
     
     return resultPromise;
   }
   
-  browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    // P1-9: Validate sender
+    if (!isValidSender(sender)) {
+      logger.warn('Rejected message from unknown sender', { senderId: sender.id });
+      return false;
+    }
+    
     if (msg.name === 'upload') {
       queueOperation(async () => {
         curOperType = OperType.SYNC;
@@ -141,6 +156,40 @@ export default defineBackground(() => {
       // performSync 内部已有 isSyncing 检查
       performSync().then(result => {
         sendResponse(result);
+      });
+      return true;
+    }
+    if (msg.name === 'getBackupRecords') {
+      getBackupRecords().then(records => {
+        sendResponse(records);
+      });
+      return true;
+    }
+    if (msg.name === 'restoreFromBackup') {
+      queueOperation(async () => {
+        curOperType = OperType.SYNC;
+        try {
+          const bookmarks = await restoreFromBackup(msg.timestamp);
+          if (!bookmarks) {
+            sendResponse({ error: 'Backup not found' });
+            return;
+          }
+          await clearBookmarkTree();
+          await createBookmarkTree(bookmarks);
+          refreshLocalCount();
+          sendResponse({ success: true, count: getBookmarkCount(bookmarks) });
+        } catch (error) {
+          sendResponse({ error: handleError(error).message });
+        } finally {
+          curOperType = OperType.NONE;
+          browser.action.setBadgeText({ text: "" });
+        }
+      });
+      return true;
+    }
+    if (msg.name === 'deleteBackupRecord') {
+      deleteBackupRecord(msg.timestamp).then(success => {
+        sendResponse({ success });
       });
       return true;
     }
@@ -230,8 +279,8 @@ export default defineBackground(() => {
   
   async function notifyRefreshCounts(): Promise<void> {
     try {
-      browser.runtime.sendMessage({ name: 'refreshCounts' });
-    } catch (e) {
+      await browser.runtime.sendMessage({ name: 'refreshCounts' });
+    } catch {
       // popup 可能未打开，忽略错误
     }
   }
@@ -262,17 +311,32 @@ export default defineBackground(() => {
         throw createError.fileNotFound(setting.gistFileName);
       }
       
-      const syncdata: SyncDataInfo = JSON.parse(gist);
+      const data = JSON.parse(gist);
+      let bookmarks: BookmarkInfo[];
+
+      // 检测数据版本，兼容 v1.0 和 v2.0 格式
+      if (data.version === '2.0') {
+        logger.info('downloadBookmarks: 检测到格式 v2.0');
+        if (!data.backupRecords || data.backupRecords.length === 0) {
+          throw createError.emptyGistFile(setting.gistFileName);
+        }
+        bookmarks = data.backupRecords[0].bookmarkData;
+      } else if (data.bookmarks) {
+        logger.info('downloadBookmarks: 检测到格式 v1.0（旧格式）');
+        bookmarks = data.bookmarks;
+      } else {
+        throw createError.invalidDataFormat();
+      }
       
-      if (!syncdata.bookmarks || syncdata.bookmarks.length === 0) {
+      if (!bookmarks || bookmarks.length === 0) {
         throw createError.emptyGistFile(setting.gistFileName);
       }
       
       await clearBookmarkTree();
-      normalizeFolderNames(syncdata.bookmarks);
-      await createBookmarkTree(syncdata.bookmarks);
+      normalizeFolderNames(bookmarks);
+      await createBookmarkTree(bookmarks);
       
-      const count = getBookmarkCount(syncdata.bookmarks);
+      const count = getBookmarkCount(bookmarks);
       await browser.storage.local.set({ [STORAGE_KEYS.REMOTE_COUNT]: count, [STORAGE_KEYS.LOCAL_COUNT]: count });
       
       notifyRefreshCounts();
@@ -499,7 +563,7 @@ async function refreshLocalCount() {
   function format(b: BookmarkInfo): BookmarkInfo {
     b.dateAdded = undefined;
     b.dateGroupModified = undefined;
-    b.id = undefined;
+    b.id = "";
     b.index = undefined;
     b.parentId = undefined;
     b.type = undefined;

@@ -67,6 +67,11 @@ export class SettingBase implements Options {
     webdavPassword: string = '';
     /** WebDAV 路径 */
     webdavPath: string = WEBDAV_DEFAULTS.PATH;
+
+    // ==================== 安全设置 ====================
+    
+    /** 主密码用于加密 */
+    masterPassword: string = '';
 }
 
 /**
@@ -129,6 +134,9 @@ export class Setting extends SettingBase {
         setting.webdavPassword = options.webdavPassword as string;
         setting.webdavPath = options.webdavPath as string;
         
+        // 复制安全设置
+        setting.masterPassword = options.masterPassword as string;
+
         return setting;
     }
 }

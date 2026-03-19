@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "Alle Bookmarks löschen. Bitte erstellen Sie vorher ein Backup.",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "Hauptpasswort und Bestätigung stimmen nicht überein",
+        "description": "Fehlermeldung, wenn Hauptpasswort und Bestätigung nicht übereinstimmen"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "Hauptpasswort (optional)",
+        "description": "Titel für Hauptpasswort-Bereich"
+    },
+    "masterPasswordLabel": {
+        "message": "Hauptpasswort",
+        "description": "Label für Hauptpasswort-Eingabefeld"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "Leer lassen, um Erweiterungs-ID zu verwenden (weniger sicher)",
+        "description": "Platzhaltertext für Passwortfeld"
+    },
+    "passwordWarningMsg": {
+        "message": "Verwenden Sie ein längeres Passwort (mindestens 8 Zeichen empfohlen)",
+        "description": "Warnmeldung für kurze Passwörter"
+    },
+    "confirmPasswordLabel": {
+        "message": "Passwort bestätigen",
+        "description": "Label für Passwortbestätigungs-Eingabefeld"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "Bestätigen Sie Ihr Hauptpasswort",
+        "description": "Platzhaltertext für Bestätigungs-Passwortfeld"
+    },
+    "saveSettings": {
+        "message": "Einstellungen speichern",
+        "description": ""
     }
 }

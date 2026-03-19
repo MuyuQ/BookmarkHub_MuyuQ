@@ -7,6 +7,8 @@
  * - 通用的异步操作包装器
  */
 
+import { logger } from './logger';
+
 /**
  * 重试配置选项
  */
@@ -36,6 +38,12 @@ function sleep(ms: number): Promise<void> {
 /**
  * 执行带重试的异步操作
  * 使用指数退避策略自动重试失败的操作
+ * 
+ * 重试逻辑说明：
+ * - 首先执行一次初始操作
+ * - 如果失败，则进行最多 maxRetries 次重试
+ * - 总共最多执行 1 + maxRetries 次操作 (初使化调用 + 重试次数)
+ * - 例如 maxRetries: 3 表示：1次初始调用 + 最多3次重试机会（如果每次都失败）
  * 
  * @param operation - 要执行的异步操作函数
  * @param options - 重试配置选项
@@ -71,34 +79,48 @@ export async function retryOperation<T>(
     let lastError: Error | undefined;
     let delay = initialDelay;
     
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    // 首先执行初始操作
+    try {
+        const result = await operation();
+        return result;
+    } catch (error) {
+        lastError = error as Error;
+        
+        // 如果启用了日志且还有重试机会，记录初始失败
+        if (logRetries && maxRetries > 0) {
+            logger.info(`初始操作失败，${delay}ms 后开始重试:`, lastError.message);
+        }
+    }
+    
+    // 现在进行指定次数的重试 (从第1次到第maxRetries次)
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        // 等待一段时间后重试
+        await sleep(delay);
+        
         try {
             const result = await operation();
             
-            // 如果之前有重试，记录成功
-            if (attempt > 0 && logRetries) {
-                console.log(`操作在第 ${attempt} 次重试后成功`);
+            // 重试成功，记录并返回结果
+            if (logRetries) {
+                logger.info(`操作在第 ${attempt} 次重试后成功`);
             }
             
             return result;
         } catch (error) {
             lastError = error as Error;
             
-            // 如果已经达到最大重试次数，直接抛出错误
+            // 如果已达到最大重试次数，停止重试
             if (attempt === maxRetries) {
                 if (logRetries) {
-                    console.error(`操作失败，已重试 ${maxRetries} 次:`, lastError.message);
+                logger.error(`操作失败，已重试 ${maxRetries} 次:`, lastError.message);
                 }
                 break;
             }
             
-            // 记录重试信息
+            // 记录下一次重试信息
             if (logRetries) {
-                console.log(`操作失败，${delay}ms 后进行第 ${attempt + 1} 次重试:`, lastError.message);
+                logger.info(`第 ${attempt} 次重试失败，${delay}ms 后进行第 ${attempt + 1} 次重试:`, lastError.message);
             }
-            
-            // 等待一段时间后重试
-            await sleep(delay);
             
             // 计算下一次延迟（指数退避 + 随机抖动）
             // 添加 ±25% 的随机抖动，防止多个客户端同时重试导致的"惊群效应"

@@ -14,6 +14,8 @@ import { http } from './http';
 import { BookmarkInfo } from './models';
 import { getBookmarkCount, formatBookmarks } from './bookmarkUtils';
 import { retryOperation } from './retry';
+import { extractBrowserFromUA, extractOSFromUA } from './browserInfo';
+import { logger } from './logger';
 
 // 重新导出工具函数，保持向后兼容
 /** @deprecated Use getBookmarkCount from './bookmarkUtils' directly */
@@ -62,6 +64,18 @@ export interface GistListResponse {
  * 封装 GitHub Gist API 的所有操作
  * 使用单例模式导出
  */
+
+/**
+ * 验证 Gist ID 格式
+ * Gist ID 应该是 32 或 40 位十六进制字符串
+ * 
+ * @param gistId - 待验证的 Gist ID
+ * @returns 是否是有效的 Gist ID 格式
+ */
+function validateGistId(gistId: string): boolean {
+  return /^[a-f0-9]{32,40}$/i.test(gistId);
+}
+
 class BookmarkService {
     /**
      * 获取远程 Gist 中的书签数据
@@ -78,22 +92,43 @@ class BookmarkService {
         return retryOperation(async () => {
             const setting = await Setting.build();
             
-            const resp = await http.get(`gists/${setting.gistID}`).json() as GistResponse;
+            // 验证 Gist ID 格式
+            if (!validateGistId(setting.gistID)) {
+                throw new Error(`Invalid Gist ID format: ${setting.gistID}. Gist IDs must be 32 or 40 character hexadecimal strings.`);
+            }
             
-            if (resp?.files) {
-                const filenames = Object.keys(resp.files);
+            let resp: GistResponse | undefined;
+            try {
+                resp = await http.get(`gists/${setting.gistID}`).json() as GistResponse;
                 
-                if (filenames.indexOf(setting.gistFileName) !== -1) {
-                    const gistFile = resp.files[setting.gistFileName];
+                if (resp?.files) {
+                    const filenames = Object.keys(resp.files);
                     
-                    if (gistFile.truncated) {
-                        const txt = await http.get(gistFile.raw_url, { prefixUrl: '' }).text();
-                        return txt;
-                    } else {
-                        return gistFile.content;
+                    if (filenames.indexOf(setting.gistFileName) !== -1) {
+                        const gistFile = resp.files[setting.gistFileName];
+                        
+                        if (gistFile.truncated) {
+                            const txt = await http.get(gistFile.raw_url, { prefixUrl: '' }).text();
+                            return txt;
+                        } else {
+                            return gistFile.content;
+                        }
                     }
                 }
+            } catch (error) {
+                // 捕获可能包含令牌信息的错误，并过滤敏感信息
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes(setting.githubToken)) {
+                    throw new Error('GitHub API request failed: Request may have failed due to authentication error.');
+                }
+                throw error;
             }
+            
+            // 添加警告日志，提示文件未找到
+            logger.warn(`Gist file not found in gist ${setting.gistID}`, { 
+                fileName: setting.gistFileName,
+                availableFiles: Object.keys(resp?.files || {})
+            });
             
             return null;
         }, { maxRetries: 3, logRetries: true });
@@ -118,9 +153,24 @@ class BookmarkService {
      * 只更新指定的文件名，保留其他文件不变
      */
     async update(data: GistUpdateData): Promise<GistResponse> {
+        const setting = await Setting.build();
+        
+        // 验证 Gist ID 格式
+        if (!validateGistId(setting.gistID)) {
+            throw new Error(`Invalid Gist ID format: ${setting.gistID}. Gist IDs must be 32 or 40 character hexadecimal strings.`);
+        }
+        
         return retryOperation(async () => {
-            const setting = await Setting.build();
-            return http.patch(`gists/${setting.gistID}`, { json: data }).json();
+            try {
+                return await http.patch(`gists/${setting.gistID}`, { json: data }).json();
+            } catch (error) {
+                // 捕获可能包含令牌信息的错误，并过滤敏感信息
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes(setting.githubToken)) {
+                    throw new Error('GitHub API update request failed: Request may have failed due to authentication error.');
+                }
+                throw error;
+            }
         }, { maxRetries: 3, logRetries: true });
     }
 }

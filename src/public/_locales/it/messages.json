@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "Rimuovi tutti i segnalibri. Fai prima un backup.",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "La password principale e la conferma non corrispondono",
+        "description": "Messaggio di errore quando la password principale non corrisponde alla conferma"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "Password Principale (Opzionale)",
+        "description": "Titolo per la sezione della password principale"
+    },
+    "masterPasswordLabel": {
+        "message": "Password Principale",
+        "description": "Etichetta per il campo di immissione della password principale"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "Lasciare vuoto per utilizzare l'ID estensione (meno sicuro)",
+        "description": "Testo segnaposto per il campo password"
+    },
+    "passwordWarningMsg": {
+        "message": "Considera l'utilizzo di una password più lunga (consigliati almeno 8 caratteri)",
+        "description": "Messaggio di avviso per password brevi"
+    },
+    "confirmPasswordLabel": {
+        "message": "Conferma Password",
+        "description": "Etichetta per il campo di immissione conferma password"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "Conferma la tua password principale",
+        "description": "Testo segnaposto per il campo conferma password"
+    },
+    "saveSettings": {
+        "message": "Salva Impostazioni",
+        "description": ""
     }
 }

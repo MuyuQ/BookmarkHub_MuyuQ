@@ -10,6 +10,7 @@ import OptionsSync from 'webext-options-sync';
 import { encrypt, decrypt, isEncrypted } from './crypto';
 import { ValidationError } from './errors';
 import { WEBDAV_DEFAULTS } from './constants';
+import { logger } from './logger';
 
 /** 敏感字段列表 - 这些字段在存储前会被加密 */
 const SENSITIVE_FIELDS = ['githubToken', 'webdavPassword'] as const;
@@ -69,6 +70,11 @@ const optionsStorage = new OptionsSync({
         webdavPassword: '',
         /** WebDAV 路径 (如：/bookmarks.json) */
         webdavPath: WEBDAV_DEFAULTS.PATH,
+        
+        // ==================== 安全设置 ====================
+        
+        /** 主密码 (可选，用于加密敏感字段) */
+        masterPassword: '',
     },
 
     /**
@@ -102,22 +108,39 @@ const optionsStorage = new OptionsSync({
 export async function getAllDecrypted(): Promise<Record<string, unknown>> {
     const options = await optionsStorage.getAll();
     
+    const masterPassword = options.masterPassword as string || '';
+    const hasMasterPassword = !!masterPassword;
+    
     for (const field of SENSITIVE_FIELDS) {
         const value = options[field] as string;
         if (value && isEncrypted(value)) {
             try {
-                options[field] = await decrypt(value);
+                if (hasMasterPassword) {
+                    // P1-17: When master password is set, ONLY use it (no fallback)
+                    options[field] = await decrypt(value, masterPassword);
+                } else {
+                    // No master password - use extension ID (legacy mode)
+                    options[field] = await decrypt(value);
+                }
             } catch (error: unknown) {
-                // 解密失败可能是由于：
-                // 1. 加密密钥变更（如扩展重新安装）
-                // 2. 数据损坏
-                // 3. 存储的加密数据格式不正确
-                console.warn(
-                    `[BookmarkHub] 解密失败 - 字段：${field}. ` +
-                    '可能原因：加密密钥变更、数据损坏或凭证错误。' +
-                    '请重新配置相关设置。'
-                );
-                // 保留空字符串以维持向后兼容，但记录警告
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                
+                if (hasMasterPassword) {
+                    // Master password set but decryption failed - don't fallback
+                    logger.error(
+                        `Decryption failed for ${field} with master password. ` +
+                        'Data may be corrupted or password incorrect. ' +
+                        'Please re-enter your credentials.'
+                    );
+                } else {
+                    // No master password, extension ID decryption failed
+                    logger.warn(
+                        `Decryption failed for ${field}. ` +
+                        'Extension may have been reinstalled. ' +
+                        'Please re-enter your credentials.'
+                    );
+                }
+                
                 options[field] = '';
             }
         }
@@ -195,10 +218,14 @@ export async function setEncrypted(options: Record<string, unknown>): Promise<vo
     
     const encryptedOptions = { ...options };
     
+    // 获取 masterPassword（如果设置了）
+    const masterPassword = options.masterPassword as string || '';
+    
     for (const field of SENSITIVE_FIELDS) {
         const value = encryptedOptions[field] as string;
         if (value && typeof value === 'string' && !isEncrypted(value)) {
-            encryptedOptions[field] = await encrypt(value);
+            // 使用 masterPassword 加密（如果设置了），否则使用扩展 ID
+            encryptedOptions[field] = await encrypt(value, masterPassword || undefined);
         }
     }
     

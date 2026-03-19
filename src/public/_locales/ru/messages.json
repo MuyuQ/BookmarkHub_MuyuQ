@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "Удалить все закладки, пожалуйста сделайте резервную копию",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "Мастер-пароль и подтверждение не совпадают",
+        "description": "Сообщение об ошибке когда мастер-пароль не совпадает с подтверждением"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "Мастер-пароль (необязательно)",
+        "description": "Заголовок для раздела мастер-пароля"
+    },
+    "masterPasswordLabel": {
+        "message": "Мастер-пароль",
+        "description": "Надпись для поля ввода мастер-пароля"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "Оставьте пустым, чтобы использовать ID расширения (менее безопасно)",
+        "description": "Текст заполнителя для поля пароля"
+    },
+    "passwordWarningMsg": {
+        "message": "Рассмотрите возможность использования более длинного пароля (рекомендуется не менее 8 символов)",
+        "description": "Предупреждение для коротких паролей"
+    },
+    "confirmPasswordLabel": {
+        "message": "Подтвердить пароль",
+        "description": "Надпись для поля подтверждения пароля"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "Подтвердите ваш мастер-пароль",
+        "description": "Текст заполнителя для поля подтверждения пароля"
+    },
+    "saveSettings": {
+        "message": "Сохранить настройки",
+        "description": ""
     }
 }

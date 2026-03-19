@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "Supprimez tous les signets. Veuillez effectuer une sauvegarde au préalable.",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "Le mot de passe principal et la confirmation ne correspondent pas",
+        "description": "Message d'erreur quand le mot de passe principal ne correspond pas à la confirmation"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "Mot de passe principal (Facultatif)",
+        "description": "Titre pour la section du mot de passe principal"
+    },
+    "masterPasswordLabel": {
+        "message": "Mot de passe principal",
+        "description": "Étiquette pour le champ de saisie du mot de passe principal"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "Laisser vide pour utiliser l'ID de l'extension (moins sécurisé)",
+        "description": "Texte indicatif pour le champ du mot de passe"
+    },
+    "passwordWarningMsg": {
+        "message": "Envisagez d'utiliser un mot de passe plus long (au moins 8 caractères recommandés)",
+        "description": "Message d'avertissement pour les mots de passe courts"
+    },
+    "confirmPasswordLabel": {
+        "message": "Confirmer le mot de passe",
+        "description": "Étiquette pour le champ de saisie de confirmation du mot de passe"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "Confirmez votre mot de passe principal",
+        "description": "Texte indicatif pour le champ de confirmation du mot de passe"
+    },
+    "saveSettings": {
+        "message": "Enregistrer les paramètres",
+        "description": ""
     }
 }

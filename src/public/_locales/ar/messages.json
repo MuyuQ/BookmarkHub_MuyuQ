@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "أزل جميع العلامات المرجعية. يرجى إجراء نسخ احتياطي أولاً",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "كلمة المرور الرئيسية وتأكيدها غير متطابقين",
+        "description": "رسالة خطأ عندما لا تطابق كلمة المرور الرئيسية التأكيد"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "كلمة المرور الرئيسية (اختياري)",
+        "description": "عنوان لقسم كلمة المرور الرئيسية"
+    },
+    "masterPasswordLabel": {
+        "message": "كلمة المرور الرئيسية",
+        "description": "لافتة لحقل إدخال كلمة المرور الرئيسية"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "اترك فارغًا لاستخدام معرف الامتداد (أقل أمانًا)",
+        "description": "نص العنصر النائب لحقل كلمة المرور"
+    },
+    "passwordWarningMsg": {
+        "message": "يفضل استخدام كلمة مرور أطول (يوصى بالأقل 8 أحرف)",
+        "description": "رسالة تحذير لكلمات المرور القصيرة"
+    },
+    "confirmPasswordLabel": {
+        "message": "تأكيد كلمة المرور",
+        "description": "لافتة لحقل إدخال تأكيد كلمة المرور"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "تأكيد كلمة المرور الرئيسية",
+        "description": "نص العنصر النائب لحقل تأكيد كلمة المرور"
+    },
+    "saveSettings": {
+        "message": "حفظ الإعدادات",
+        "description": ""
     }
 }

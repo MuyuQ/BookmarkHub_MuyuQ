@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "全てのブックマークを削除します。事前にバックアップを行ってください。",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "マスターパスワードと確認用パスワードが一致しません",
+        "description": "マスターパスワードと確認用パスワードが一致しない場合のエラーメッセージ"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "マスターパスワード (任意)",
+        "description": "マスターパスワードセクションのタイトル"
+    },
+    "masterPasswordLabel": {
+        "message": "マスターパスワード",
+        "description": "マスターパスワード入力フィールドのラベル"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "空にして拡張機能IDを使用（安全性が低くなります）",
+        "description": "パスワードフィールドのプレースホルダーテキスト"
+    },
+    "passwordWarningMsg": {
+        "message": "より長いパスワードを使用してください（少なくとも8文字以上を推奨）",
+        "description": "短いパスワードに対する警告メッセージ"
+    },
+    "confirmPasswordLabel": {
+        "message": "パスワードの確認",
+        "description": "パスワード確認入力フィールドのラベル"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "マスターパスワードを確認",
+        "description": "確認パスワードフィールドのプレースホルダーテキスト"
+    },
+    "saveSettings": {
+        "message": "設定を保存",
+        "description": ""
     }
 }

@@ -10,6 +10,7 @@ import {
 import { exportBookmarks } from '../../utils/exporter'
 import { importBookmarks } from '../../utils/importer'
 import { flattenBookmarks } from '../../utils/bookmarkUtils'
+import iconLogo from '../../assets/icon.png'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './popup.css'
 
@@ -64,7 +65,7 @@ const Popup: React.FC = () => {
         await exportBookmarks('html', flatBookmarks);
     };
     
-    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             try {
@@ -75,9 +76,21 @@ const Popup: React.FC = () => {
                         url: bookmark.url
                     });
                 }
-                alert(`Successfully imported ${bookmarks.length} bookmarks`);
+                // P1-11: Replace alert() with browser.notifications to prevent XSS
+                await browser.notifications.create({
+                    type: 'basic',
+                    iconUrl: iconLogo,
+                    title: browser.i18n.getMessage('importBookmarks') || 'Import Bookmarks',
+                    message: browser.i18n.getMessage('importSuccess', [String(bookmarks.length)]) || `Successfully imported ${bookmarks.length} bookmarks`
+                });
             } catch (error) {
-                alert('Failed to import bookmarks: ' + (error as Error).message);
+                // P1-11: Replace alert() with browser.notifications
+                await browser.notifications.create({
+                    type: 'basic',
+                    iconUrl: iconLogo,
+                    title: browser.i18n.getMessage('error') || 'Error',
+                    message: browser.i18n.getMessage('importFailed', [(error as Error).message]) || `Import failed: ${(error as Error).message}`
+                });
             }
         }
     };
@@ -85,24 +98,25 @@ const Popup: React.FC = () => {
     return (
         <IconContext.Provider value={{ className: 'dropdown-item-icon' }}>
             <Dropdown.Menu show>
-                <Dropdown.Item name='upload' as="button" title={browser.i18n.getMessage('uploadBookmarksDesc')}><AiOutlineCloudUpload />{browser.i18n.getMessage('uploadBookmarks')}</Dropdown.Item>
-                <Dropdown.Item name='download' as="button" title={browser.i18n.getMessage('downloadBookmarksDesc')}><AiOutlineCloudDownload />{browser.i18n.getMessage('downloadBookmarks')}</Dropdown.Item>
+                <Dropdown.Item name='upload' as="button" aria-label={browser.i18n.getMessage('uploadBookmarks')} title={browser.i18n.getMessage('uploadBookmarksDesc')}><AiOutlineCloudUpload aria-hidden="true" />{browser.i18n.getMessage('uploadBookmarks')}</Dropdown.Item>
+                <Dropdown.Item name='download' as="button" aria-label={browser.i18n.getMessage('downloadBookmarks')} title={browser.i18n.getMessage('downloadBookmarksDesc')}><AiOutlineCloudDownload aria-hidden="true" />{browser.i18n.getMessage('downloadBookmarks')}</Dropdown.Item>
                 <Dropdown.Divider />
-                <Dropdown.Item as="button" onClick={handleExport}>
-                    <AiOutlineExport /> {browser.i18n.getMessage('exportBookmarks')}
+                <Dropdown.Item as="button" onClick={handleExport} aria-label={browser.i18n.getMessage('exportBookmarks')}>
+                    <AiOutlineExport aria-hidden="true" /> {browser.i18n.getMessage('exportBookmarks')}
                 </Dropdown.Item>
-                <Dropdown.Item as="label" className="dropdown-item mb-0">
-                    <AiOutlineImport /> {browser.i18n.getMessage('importBookmarks')}
+                <Dropdown.Item as="label" className="dropdown-item mb-0" aria-label={browser.i18n.getMessage('importBookmarks')} role="button">
+                    <AiOutlineImport aria-hidden="true" /> {browser.i18n.getMessage('importBookmarks')}
                     <input
                         type="file"
                         accept=".json,.html"
                         style={{ display: 'none' }}
                         onChange={handleImport}
+                        aria-label={browser.i18n.getMessage('importBookmarks')}
                     />
                 </Dropdown.Item>
                 <Dropdown.Divider />
-                <Dropdown.Item name='setting' as="button"><AiOutlineSetting />{browser.i18n.getMessage('settings')}</Dropdown.Item>
-<div className="footer-bar">
+                <Dropdown.Item name='setting' as="button" aria-label={browser.i18n.getMessage('settings')}><AiOutlineSetting aria-hidden="true" />{browser.i18n.getMessage('settings')}</Dropdown.Item>
+<div className="footer-bar" aria-live="polite" aria-atomic="true">
                     <span className="count-info">
                         <Badge id="localCount" variant="light" title={browser.i18n.getMessage('localCount')}>
                           {browser.i18n.getMessage('local')}: {count["local"]}

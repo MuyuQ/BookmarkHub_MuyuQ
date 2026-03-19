@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "모든 북마크를 삭제합니다. 사전에 백업하세요.",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "마스터 비밀번호와 확인이 일치하지 않습니다",
+        "description": "마스터 비밀번호와 확인이 일치하지 않는 경우의 오류 메시지"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "마스터 비밀번호 (선택 사항)",
+        "description": "마스터 비밀번호 섹션 제목"
+    },
+    "masterPasswordLabel": {
+        "message": "마스터 비밀번호",
+        "description": "마스터 비밀번호 입력 필드 레이블"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "확장 프로그램 ID 사용을 위해 비워두기 (보안 수준 낮음)",
+        "description": "비밀번호 필드의 플레이스홀더 텍스트"
+    },
+    "passwordWarningMsg": {
+        "message": "더 긴 비밀번호를 사용하는 것을 고려하세요 (최소 8자 이상 권장)",
+        "description": "짧은 비밀번호에 대한 경고 메시지"
+    },
+    "confirmPasswordLabel": {
+        "message": "비밀번호 확인",
+        "description": "비밀번호 확인 입력 필드 레이블"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "마스터 비밀번호를 확인하세요",
+        "description": "확인 비밀번호 필드의 플레이스홀더 텍스트"
+    },
+    "saveSettings": {
+        "message": "설정 저장",
+        "description": ""
     }
 }

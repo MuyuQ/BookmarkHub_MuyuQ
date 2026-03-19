@@ -71,18 +71,19 @@ export function detectChanges(
         const modifiedChange = oldBookmark.title !== bookmark.title ||
                                oldBookmark.url !== bookmark.url;
         
-        if (movedChange) {
-          moved.push({
-            type: 'moved',
+        // P0-5/P0-6 Fix: Make categories mutually exclusive
+        // Priority: modified > moved (content changes are more significant)
+        // A bookmark that has both content and position changes is classified as "modified"
+        if (modifiedChange) {
+          modified.push({
+            type: 'modified',
             bookmark,
             previous: oldBookmark,
             timestamp: now,
           });
-        }
-        
-        if (modifiedChange) {
-          modified.push({
-            type: 'modified',
+        } else if (movedChange) {
+          moved.push({
+            type: 'moved',
             bookmark,
             previous: oldBookmark,
             timestamp: now,

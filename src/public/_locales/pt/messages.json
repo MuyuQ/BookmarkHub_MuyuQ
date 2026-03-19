@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "Remover todos os favoritos. Por favor, faça um backup primeiro.",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "A senha mestra e a confirmação não coincidem",
+        "description": "Mensagem de erro quando a senha mestra e a confirmação não coincidem"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "Senha Mestra (Opcional)",
+        "description": "Título para sessão de senha mestra"
+    },
+    "masterPasswordLabel": {
+        "message": "Senha Mestra",
+        "description": "Rótulo para campo de entrada da senha mestra"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "Deixe vazio para usar o ID da extensão (menos seguro)",
+        "description": "Texto placeholder para campo de senha"
+    },
+    "passwordWarningMsg": {
+        "message": "Considere usar uma senha mais longa (mínimo recomendado 8 caracteres)",
+        "description": "Mensagem de aviso para senhas curtas"
+    },
+    "confirmPasswordLabel": {
+        "message": "Confirmar Senha",
+        "description": "Rótulo para campo de confirmação de senha"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "Confirme sua senha mestra",
+        "description": "Texto placeholder para campo de confirmação de senha"
+    },
+    "saveSettings": {
+        "message": "Salvar Configurações",
+        "description": ""
     }
 }

@@ -1,7 +1,10 @@
 import { BookmarkInfo, SyncDataInfo, ConflictInfo } from './models';
 import { BookmarkChange, detectChanges, ChangeDetectionResult } from './changeDetection';
+import { logger } from './logger';
 
 export type ConflictMode = 'auto' | 'prompt';
+
+const MAX_RECURSION_DEPTH = 100;
 
 export interface MergeResult {
   merged: BookmarkInfo[];
@@ -89,6 +92,10 @@ function findConflicts(
   for (const l of local.changes) {
     for (const r of remote.changes) {
       if (l.bookmark.id === r.bookmark.id) {
+        // P1-14: Skip non-conflicting scenarios - created/deleted on both sides
+        if (l.type === 'created' && r.type === 'created') continue;
+        if (l.type === 'deleted' && r.type === 'deleted') continue;
+        
         conflicts.push({ local: l, remote: r });
       }
     }
@@ -159,16 +166,28 @@ function applyChanges(
 }
 
 function addBookmarkToTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {
-  if (!bookmark.parentId) {
-    tree.push(bookmark);
-    return;
-  }
-  
-  const parent = findBookmarkById(tree, bookmark.parentId);
-  if (parent) {
-    if (!parent.children) parent.children = [];
-    parent.children.push(bookmark);
-  }
+    if (!bookmark.parentId) {
+        tree.push(bookmark);
+        logger.debug('addBookmarkToTree: 添加根级书签', { title: bookmark.title, url: bookmark.url });
+        return;
+    }
+    
+    const parent = findBookmarkById(tree, bookmark.parentId);
+    if (parent) {
+        if (!parent.children) parent.children = [];
+        parent.children.push(bookmark);
+        logger.debug('addBookmarkToTree: 添加到父文件夹', { 
+            title: bookmark.title, 
+            parentId: bookmark.parentId,
+            parentTitle: parent.title 
+        });
+    } else {
+        logger.warn('addBookmarkToTree: 找不到父文件夹，添加到根级别', { 
+            title: bookmark.title, 
+            parentId: bookmark.parentId 
+        });
+        tree.push(bookmark);
+    }
 }
 
 function updateBookmarkInTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {
@@ -179,7 +198,13 @@ function updateBookmarkInTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): voi
   }
 }
 
-function removeBookmarkFromTree(tree: BookmarkInfo[], id: string): void {
+function removeBookmarkFromTree(tree: BookmarkInfo[], id: string, depth: number = 0): void {
+  // P1-13: Prevent stack overflow
+  if (depth > MAX_RECURSION_DEPTH) {
+    logger.warn('Max recursion depth exceeded in removeBookmarkFromTree');
+    return;
+  }
+  
   for (let i = 0; i < tree.length; i++) {
     if (tree[i].id === id) {
       tree.splice(i, 1);
@@ -187,16 +212,22 @@ function removeBookmarkFromTree(tree: BookmarkInfo[], id: string): void {
     }
     const children = tree[i].children;
     if (children) {
-      removeBookmarkFromTree(children, id);
+      removeBookmarkFromTree(children, id, depth + 1);
     }
   }
 }
 
-function findBookmarkById(tree: BookmarkInfo[], id: string): BookmarkInfo | undefined {
+function findBookmarkById(tree: BookmarkInfo[], id: string, depth: number = 0): BookmarkInfo | undefined {
+  // P1-13: Prevent stack overflow from deeply nested bookmarks
+  if (depth > MAX_RECURSION_DEPTH) {
+    logger.warn('Max recursion depth exceeded in findBookmarkById');
+    return undefined;
+  }
+  
   for (const b of tree) {
     if (b.id === id) return b;
     if (b.children) {
-      const found = findBookmarkById(b.children, id);
+      const found = findBookmarkById(b.children, id, depth + 1);
       if (found) return found;
     }
   }

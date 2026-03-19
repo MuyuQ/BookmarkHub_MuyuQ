@@ -11,6 +11,54 @@ import { retryOperation } from './retry';
 import { logger } from './logger';
 
 /**
+ * 危险路径模式 - 用于检测路径遍历攻击
+ * 包括: .. (目录遍历), // (双斜杠), \ (反斜杠), \0 和 \u0000 (空字节)
+ */
+const FORBIDDEN_PATH_PATTERNS = /\.\.|\/\/|\\|\0|\u0000/g;
+
+/**
+ * 清理和验证 WebDAV 路径
+ * 防止路径遍历攻击 (如 ../../../etc/passwd)
+ * 
+ * @param path - 原始路径
+ * @returns 清理后的安全路径
+ */
+function sanitizePath(path: string): string {
+    if (!path || typeof path !== 'string') {
+        return '/';
+    }
+
+
+    
+    // 解码 URL 编码的路径（防止 ..%2F 绕过）
+    let sanitized: string;
+    try {
+        sanitized = decodeURIComponent(path);
+    } catch {
+        // 如果解码失败，使用原始路径
+        sanitized = path;
+    }
+
+
+    
+    // 移除危险的路径模式
+    sanitized = sanitized.replace(FORBIDDEN_PATH_PATTERNS, '');
+    
+    // 确保以 / 开头
+    if (!sanitized.startsWith('/')) {
+        sanitized = '/' + sanitized;
+    }
+
+
+    
+    // 规范化多个连续斜杠
+    sanitized = sanitized.replace(/\/+/g, '/');
+    
+    return sanitized;
+}
+
+
+/**
  * WebDAV 客户端类
  * 封装 WebDAV 协议的基本操作
  * 
@@ -24,10 +72,8 @@ import { logger } from './logger';
 export class WebDAVClient {
     /** WebDAV 服务器基础 URL */
     private baseUrl: string;
-    /** 用户名 */
-    private username: string;
-    /** 密码 */
-    private password: string;
+    /** 缓存的认证头（密码不存储在内存中） */
+    private authHeader: string;
     /** 默认 Content-Type */
     private contentType: string;
 
@@ -44,40 +90,49 @@ export class WebDAVClient {
         if (!baseUrl || typeof baseUrl !== 'string') {
             throw new Error('WebDAV URL is required and must be a string');
         }
+
+
         
         // 检查 URL 协议
         if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
             throw new Error('WebDAV URL must start with http:// or https://');
         }
+
+
         
         // 验证用户名
         if (!username || typeof username !== 'string' || username.trim() === '') {
             throw new Error('WebDAV username is required and must be non-empty');
         }
+
+
         
         // 验证密码 (允许空字符串作为密码，但必须是字符串)
         if (password === undefined || password === null || typeof password !== 'string') {
             throw new Error('WebDAV password is required and must be a string');
         }
+
+
         
         // 移除末尾的斜杠，保持 URL 格式一致
         this.baseUrl = baseUrl.replace(/\/$/, '');
-        this.username = username;
-        this.password = password;
+        // 立即生成认证头，不存储密码（安全考虑）
+        this.authHeader = `Basic ${btoa(`${username}:${password}`)}`;
         this.contentType = contentType;
     }
 
+
+
     /**
      * 生成 Basic Auth 认证头
-     * 将用户名和密码组合并 Base64 编码
+     * 返回缓存的认证头
      * 
      * @returns Basic Auth 认证字符串
      */
     private getAuthHeader(): string {
-        // 组合用户名密码并进行 Base64 编码
-        const credentials = btoa(`${this.username}:${this.password}`);
-        return `Basic ${credentials}`;
+        return this.authHeader;
     }
+
 
     /**
      * 读取文件
@@ -90,16 +145,20 @@ export class WebDAVClient {
     async read(path: string): Promise<string | null> {
         try {
             return await retryOperation(async () => {
-                const response = await fetch(`${this.baseUrl}${path}`, {
+                const response = await fetch(`${this.baseUrl}${sanitizePath(path)}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': this.getAuthHeader()
                     }
+
+
                 });
 
                 if (!response.ok) {
                     throw new Error(`WebDAV read failed: ${response.status}`);
                 }
+
+
 
                 return await response.text();
             }, { maxRetries: 3, logRetries: true });
@@ -107,7 +166,11 @@ export class WebDAVClient {
             logger.error('WebDAV read error', error);
             return null;
         }
+
+
     }
+
+
 
     /**
      * 写入文件
@@ -122,7 +185,7 @@ export class WebDAVClient {
     async write(path: string, content: string, contentType?: string): Promise<boolean> {
         try {
             return await retryOperation(async () => {
-                const response = await fetch(`${this.baseUrl}${path}`, {
+                const response = await fetch(`${this.baseUrl}${sanitizePath(path)}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': this.getAuthHeader(),
@@ -135,13 +198,19 @@ export class WebDAVClient {
                     throw new Error(`WebDAV write failed: ${response.status}`);
                 }
 
+
+
                 return true;
             }, { maxRetries: 3, logRetries: true });
         } catch (error) {
             logger.error('WebDAV write error', error);
             return false;
         }
+
+
     }
+
+
 
     /**
      * 检查文件是否存在
@@ -153,18 +222,35 @@ export class WebDAVClient {
     async exists(path: string): Promise<boolean> {
         try {
             // 发送 HEAD 请求
-            const response = await fetch(`${this.baseUrl}${path}`, {
+            const response = await fetch(`${this.baseUrl}${sanitizePath(path)}`, {
                 method: 'HEAD',
                 headers: {
                     'Authorization': this.getAuthHeader()
                 }
+
+
             });
 
             return response.ok;
         } catch {
             return false;
         }
+
+
     }
+
+    /**
+     * 清除凭证信息
+     * 在操作完成后调用此方法可以立即清除内存中的认证信息
+     * 安全最佳实践：减少敏感数据在内存中的留存时间
+     * 
+     * @returns void
+     */
+    public clearCredentials(): void {
+        this.authHeader = '';
+    }
+
+
 
     /**
      * 删除文件
@@ -177,11 +263,13 @@ export class WebDAVClient {
     async remove(path: string): Promise<boolean> {
         try {
             return await retryOperation(async () => {
-                const response = await fetch(`${this.baseUrl}${path}`, {
+                const response = await fetch(`${this.baseUrl}${sanitizePath(path)}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': this.getAuthHeader()
                     }
+
+
                 });
 
                 // 204 No Content 表示删除成功
@@ -192,7 +280,11 @@ export class WebDAVClient {
             logger.error('WebDAV delete error', error);
             return false;
         }
+
+
     }
+
+
 }
 
 /**
@@ -210,10 +302,14 @@ export async function getWebDAVClient(): Promise<WebDAVClient | null> {
         return null;
     }
 
+
+
     // 检查 WebDAV 配置是否完整
     if (!setting.webdavUrl || !setting.webdavUsername || !setting.webdavPassword) {
         return null;
     }
+
+
 
     // 创建并返回客户端实例
     return new WebDAVClient(
@@ -234,9 +330,14 @@ export async function webdavRead(path?: string): Promise<string | null> {
     const client = await getWebDAVClient();
     if (!client) return null;
 
-    // 获取设置中的默认路径
-    const setting = await Setting.build();
-    return await client.read(path || setting.webdavPath);
+    try {
+        // 获取设置中的默认路径
+        const setting = await Setting.build();
+        return await client.read(sanitizePath(path || setting.webdavPath));
+    } finally {
+        // 操作完成后立即清除凭证，减少内存中的敏感数据留存时间
+        client.clearCredentials();
+    }
 }
 
 /**
@@ -251,9 +352,14 @@ export async function webdavWrite(content: string, path?: string): Promise<boole
     const client = await getWebDAVClient();
     if (!client) return false;
 
-    // 获取设置中的默认路径
-    const setting = await Setting.build();
-    return await client.write(path || setting.webdavPath, content);
+    try {
+        // 获取设置中的默认路径
+        const setting = await Setting.build();
+        return await client.write(sanitizePath(path || setting.webdavPath), content);
+    } finally {
+        // 操作完成后立即清除凭证，减少内存中的敏感数据留存时间
+        client.clearCredentials();
+    }
 }
 
 /**
@@ -278,12 +384,12 @@ export async function testWebDAVConnection(
     username: string,
     password: string
 ): Promise<{ success: boolean; message: string }> {
-    try {
-        // 创建测试客户端
-        const client = new WebDAVClient(url, username, password);
+    // 创建测试客户端
+    const client = new WebDAVClient(url, username, password);
 
+    try {
         // 生成唯一的测试文件路径
-        const testPath = '/.bookmarkhub-test-' + Date.now();
+        const testPath = sanitizePath('/.bookmarkhub-test-' + Date.now());
 
         // 1. 尝试写入测试文件
         const writeResult = await client.write(testPath, 'test');
@@ -291,11 +397,13 @@ export async function testWebDAVConnection(
             return { success: false, message: 'Failed to write test file' };
         }
 
+
         // 2. 尝试读取测试文件
         const readResult = await client.read(testPath);
         if (readResult !== 'test') {
             return { success: false, message: 'Failed to read test file' };
         }
+
 
         // 3. 删除测试文件
         const deleteResult = await client.remove(testPath);
@@ -303,10 +411,14 @@ export async function testWebDAVConnection(
             return { success: false, message: 'Failed to delete test file' };
         }
 
+
         // 4. 返回成功
         return { success: true, message: 'Connection successful' };
     } catch (error: unknown) {
         const err = error as Error;
         return { success: false, message: err.message };
+    } finally {
+        // 测试完成后立即清除凭证，减少内存中的敏感数据留存时间
+        client.clearCredentials();
     }
 }

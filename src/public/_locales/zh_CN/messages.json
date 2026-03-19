@@ -258,5 +258,93 @@
     "webdavPasswordRequired": {
         "message": "WebDAV 密码不能为空",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "主密码和确认密码不匹配",
+        "description": "当主密码和确认密码不匹配时的错误信息"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "主密码（可选）",
+        "description": "主密码区域标题"
+    },
+    "masterPasswordLabel": {
+        "message": "主密码",
+        "description": "主密码输入框标签"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "留空以使用扩展ID（安全性较低）",
+        "description": "密码字段的占位符文本"
+    },
+    "passwordWarningMsg": {
+        "message": "建议使用更长的密码（推荐至少8个字符）",
+        "description": "针对短密码的警告信息"
+    },
+    "confirmPasswordLabel": {
+        "message": "确认密码",
+        "description": "确认密码输入框标签"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "确认您的主密码",
+        "description": "确认密码字段的占位符文本"
+    },
+    "saveSettings": {
+        "message": "保存设置",
+        "description": ""
+    },
+    "backupHistory": {
+        "message": "备份历史",
+        "description": ""
+    },
+    "noBackupRecords": {
+        "message": "没有找到备份记录。同步时会自动创建备份。",
+        "description": ""
+    },
+    "backupTime": {
+        "message": "备份时间",
+        "description": ""
+    },
+    "bookmarkCount": {
+        "message": "书签数量",
+        "description": ""
+    },
+    "actions": {
+        "message": "操作",
+        "description": ""
+    },
+    "restore": {
+        "message": "还原",
+        "description": ""
+    },
+    "delete": {
+        "message": "删除",
+        "description": ""
+    },
+    "cancel": {
+        "message": "取消",
+        "description": ""
+    },
+    "restoreBackup": {
+        "message": "还原备份",
+        "description": ""
+    },
+    "restoring": {
+        "message": "正在还原书签...",
+        "description": ""
+    },
+    "restoreSuccess": {
+        "message": "备份还原成功！",
+        "description": ""
+    },
+    "restoreFailed": {
+        "message": "备份还原失败。",
+        "description": ""
+    },
+    "confirmRestoreBackup": {
+        "message": "确定要还原此备份吗？当前的书签将被替换。",
+        "description": ""
+    },
+    "confirmDeleteBackup": {
+        "message": "确定要删除此备份吗？",
+        "description": ""
     }
 }

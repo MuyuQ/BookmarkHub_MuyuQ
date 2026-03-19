@@ -290,5 +290,213 @@
     "webdavPasswordRequired": {
         "message": "WebDAV Password cannot be empty",
         "description": ""
+    },
+    "backupManagement": {
+        "message": "Backup Management",
+        "description": ""
+    },
+    "enableAutoBackup": {
+        "message": "Enable Auto Backup",
+        "description": ""
+    },
+    "maxBackups": {
+        "message": "Max Backups",
+        "description": ""
+    },
+    "refreshBackupList": {
+        "message": "Refresh Backup List",
+        "description": ""
+    },
+    "backupDate": {
+        "message": "Backup Date",
+        "description": ""
+    },
+    "bookmarkCount": {
+        "message": "Bookmarks",
+        "description": ""
+    },
+    "fileSize": {
+        "message": "Size",
+        "description": ""
+    },
+    "actions": {
+        "message": "Actions",
+        "description": ""
+    },
+    "restore": {
+        "message": "Restore",
+        "description": ""
+    },
+    "download": {
+        "message": "Download",
+        "description": ""
+    },
+    "delete": {
+        "message": "Delete",
+        "description": ""
+    },
+    "noBackups": {
+        "message": "No backups found",
+        "description": ""
+    },
+    "confirmRestore": {
+        "message": "Confirm Restore",
+        "description": ""
+    },
+    "confirmRestoreDesc": {
+        "message": "Are you sure you want to restore bookmarks to the selected backup? Current bookmarks will be replaced.",
+        "description": ""
+    },
+    "cancel": {
+        "message": "Cancel",
+        "description": ""
+    },
+    "confirmRestoreButton": {
+        "message": "Confirm Restore",
+        "description": ""
+    },
+    "backupHistory": {
+        "message": "Backup History",
+        "description": ""
+    },
+    "localCache": {
+        "message": "Local Cache",
+        "description": ""
+    },
+    "current": {
+        "message": "Current",
+        "description": ""
+    },
+    "backupSource": {
+        "message": "Source",
+        "description": ""
+    },
+    "backupTime": {
+        "message": "Backup Time",
+        "description": ""
+    },
+    "debounceTime": {
+        "message": "Debounce Time (ms)",
+        "description": ""
+    },
+    "restoreSuccess": {
+        "message": "Backup restored successfully",
+        "description": ""
+    },
+    "importSuccess": {
+        "message": "Successfully imported $COUNT$ bookmarks",
+        "description": "Success message for import",
+        "placeholders": {
+            "COUNT": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "importFailed": {
+        "message": "Failed to import bookmarks: $ERROR$",
+        "description": "Error message for import failure",
+        "placeholders": {
+            "ERROR": {
+                "content": "$1",
+                "example": "Invalid file format"
+            }
+        }
+    },
+    "webdavFieldsRequired": {
+        "message": "Please fill in all WebDAV fields",
+        "description": ""
+    },
+    "loading": {
+        "message": "Loading...",
+        "description": ""
+    },
+    "loadingBackupData": {
+        "message": "Loading backup data...",
+        "description": ""
+    },
+    "failedToLoadBackupData": {
+        "message": "Failed to load backup data",
+        "description": ""
+    },
+    "failedToRestoreBackup": {
+        "message": "Failed to restore backup",
+        "description": ""
+    },
+    "settingsSavedSuccess": {
+        "message": "Settings Saved Successfully",
+        "description": ""
+    },
+    "saving": {
+        "message": "Saving...",
+        "description": ""
+    },
+    "saveSettings": {
+        "message": "Save Settings",
+        "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "Master password and confirmation do not match",
+        "description": "Error message when master password doesn't match confirmation"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "Master Password (Optional)",
+        "description": "Title for master password section"
+    },
+    "masterPasswordLabel": {
+        "message": "Master Password",
+        "description": "Label for master password input"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "Leave empty to use extension ID (less secure)",
+        "description": "Placeholder text for password field"
+    },
+    "passwordWarningMsg": {
+        "message": "Consider using a longer password (at least 8 characters recommended)",
+        "description": "Warning message for short passwords"
+    },
+    "confirmPasswordLabel": {
+        "message": "Confirm Password",
+        "description": "Label for confirm password input"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "Confirm your master password",
+        "description": "Placeholder text for confirm password field"
+    },
+    "noBackupsHint": {
+        "message": "No backups found. Click \"Refresh Backup List\" to load data.",
+        "description": ""
+    },
+    "bookmarkActions": {
+        "message": "Bookmark Actions",
+        "description": "Aria label for popup menu"
+    },
+    "bookmarkCounts": {
+        "message": "Bookmark Counts",
+        "description": "Aria label for bookmark counts section"
+    },
+    "noBackupRecords": {
+        "message": "No backup records found. Backups are created automatically when syncing.",
+        "description": ""
+    },
+    "restoreBackup": {
+        "message": "Restore Backup",
+        "description": ""
+    },
+    "restoring": {
+        "message": "Restoring bookmarks...",
+        "description": ""
+    },
+    "restoreFailed": {
+        "message": "Failed to restore backup.",
+        "description": ""
+    },
+    "confirmRestoreBackup": {
+        "message": "Are you sure you want to restore this backup? Current bookmarks will be replaced.",
+        "description": ""
+    },
+    "confirmDeleteBackup": {
+        "message": "Delete this backup?",
+        "description": ""
     }
 }

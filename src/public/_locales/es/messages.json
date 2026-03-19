@@ -86,5 +86,37 @@
     "removeAllBookmarksDesc": {
         "message": "Eliminar todos los marcadores. Por favor, realice una copia de seguridad primero.",
         "description": ""
+    },
+    "masterPasswordMatchError": {
+        "message": "La contraseña maestra y la confirmación no coinciden",
+        "description": "Mensaje de error cuando la contraseña maestra no coincide con la confirmación"
+    },
+    "masterPasswordOptionalTitle": {
+        "message": "Contraseña Maestra (Opcional)",
+        "description": "Título para la sección de contraseña maestra"
+    },
+    "masterPasswordLabel": {
+        "message": "Contraseña Maestra",
+        "description": "Etiqueta para el campo de entrada de contraseña maestra"
+    },
+    "leaveEmptyPlaceholder": {
+        "message": "Déjelo vacío para usar el ID de extensión (menos seguro)",
+        "description": "Texto de marcador de posición para el campo de contraseña"
+    },
+    "passwordWarningMsg": {
+        "message": "Considere utilizar una contraseña más larga (se recomienda al menos 8 caracteres)",
+        "description": "Mensaje de advertencia para contraseñas cortas"
+    },
+    "confirmPasswordLabel": {
+        "message": "Confirmar Contraseña",
+        "description": "Etiqueta para el campo de entrada de confirmación de contraseña"
+    },
+    "confirmPasswordPlaceholder": {
+        "message": "Confirme su contraseña maestra",
+        "description": "Texto de marcador de posición para el campo de confirmación de contraseña"
+    },
+    "saveSettings": {
+        "message": "Guardar Configuración",
+        "description": ""
     }
 }

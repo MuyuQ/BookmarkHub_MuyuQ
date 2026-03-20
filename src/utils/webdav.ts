@@ -117,8 +117,23 @@ export class WebDAVClient {
         // 移除末尾的斜杠，保持 URL 格式一致
         this.baseUrl = baseUrl.replace(/\/$/, '');
         // 立即生成认证头，不存储密码（安全考虑）
-        this.authHeader = `Basic ${btoa(`${username}:${password}`)}`;
+        this.authHeader = this.createAuthHeader(username, password);
         this.contentType = contentType;
+    }
+
+    /**
+     * 创建 Basic Auth 认证头
+     * 使用 UTF-8 编码支持 Unicode 字符（如中文用户名/密码）
+     *
+     * @param username - 用户名
+     * @param password - 密码
+     * @returns Basic Auth 认证字符串
+     */
+    private createAuthHeader(username: string, password: string): string {
+        const credentials = `${username}:${password}`;
+        // 使用 UTF-8 编码，解决 btoa() 只支持 Latin1 字符的问题
+        const utf8Credentials = unescape(encodeURIComponent(credentials));
+        return `Basic ${btoa(utf8Credentials)}`;
     }
 
 

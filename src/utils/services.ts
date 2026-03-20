@@ -17,6 +17,33 @@ import { retryOperation } from './retry';
 import { extractBrowserFromUA, extractOSFromUA } from './browserInfo';
 import { logger } from './logger';
 
+/**
+ * 转义正则表达式中的特殊字符
+ *
+ * @param str - 需要转义的字符串
+ * @returns 转义后的字符串，可以安全用于正则表达式
+ */
+function escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * 从错误消息中清理敏感 token
+ *
+ * 如果 token 为空或无效，直接返回原始消息。
+ * 否则，将消息中的 token 替换为 [REDACTED]。
+ *
+ * @param errorMessage - 原始错误消息
+ * @param token - 需要清理的 token
+ * @returns 清理后的错误消息
+ */
+function sanitizeToken(errorMessage: string, token: string): string {
+    if (!token || token.trim() === '') {
+        return errorMessage; // 无 token 需要清理
+    }
+    return errorMessage.replace(new RegExp(escapeRegex(token), 'g'), '[REDACTED]');
+}
+
 // 重新导出工具函数，保持向后兼容
 /** @deprecated Use getBookmarkCount from './bookmarkUtils' directly */
 export { getBookmarkCount };
@@ -118,8 +145,10 @@ class BookmarkService {
             } catch (error) {
                 // 捕获可能包含令牌信息的错误，并过滤敏感信息
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                if (errorMessage.includes(setting.githubToken)) {
-                    throw new Error('GitHub API request failed: Request may have failed due to authentication error.');
+                const sanitizedMessage = sanitizeToken(errorMessage, setting.githubToken);
+                if (sanitizedMessage !== errorMessage) {
+                    // 错误消息中包含 token，使用清理后的消息
+                    throw new Error(`GitHub API request failed: ${sanitizedMessage}`);
                 }
                 throw error;
             }
@@ -166,8 +195,10 @@ class BookmarkService {
             } catch (error) {
                 // 捕获可能包含令牌信息的错误，并过滤敏感信息
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                if (errorMessage.includes(setting.githubToken)) {
-                    throw new Error('GitHub API update request failed: Request may have failed due to authentication error.');
+                const sanitizedMessage = sanitizeToken(errorMessage, setting.githubToken);
+                if (sanitizedMessage !== errorMessage) {
+                    // 错误消息中包含 token，使用清理后的消息
+                    throw new Error(`GitHub API update request failed: ${sanitizedMessage}`);
                 }
                 throw error;
             }

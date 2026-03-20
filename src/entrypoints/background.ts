@@ -9,7 +9,9 @@ import { getBookmarkCount, formatBookmarks } from '../utils/bookmarkUtils'
 import { createError, handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
 import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS } from '../utils/constants'
-import { getBackupRecords, restoreFromBackup, deleteBackupRecord } from '../utils/localCache'
+import { getBackupRecords, restoreFromBackup, deleteBackupRecord, getLocalCache, saveLocalCache, createEmptyLocalCache } from '../utils/localCache'
+import { getBrowserInfo } from '../utils/browserInfo'
+import { Tombstone } from '../utils/models'
 
 export default defineBackground(() => {
 
@@ -221,11 +223,69 @@ export default defineBackground(() => {
   browser.bookmarks.onRemoved.addListener((id, info) => {
     if (curOperType === OperType.NONE) {
       // console.log("onRemoved", id, info)
+      // 创建墓碑记录，防止删除的书签被"复活"
+      createTombstoneForBookmark(id, info).catch(err => {
+        logger.error('onRemoved: Failed to create tombstone', { id, error: err });
+      });
       browser.action.setBadgeText({ text: "!" });
       browser.action.setBadgeBackgroundColor({ color: "#F00" });
       refreshLocalCount();
     }
   })
+
+  /**
+   * 为被删除的书签创建墓碑记录
+   * 墓碑用于防止已删除的书签在其他设备同步时被"复活"
+   *
+   * @param bookmarkId - 被删除书签的 ID
+   * @param removeInfo - 删除信息（包含节点信息）
+   */
+  async function createTombstoneForBookmark(
+    bookmarkId: string,
+    removeInfo: Bookmarks.OnRemovedRemoveInfoType
+  ): Promise<void> {
+    try {
+      // 获取或初始化本地缓存
+      let cache = await getLocalCache();
+      if (!cache) {
+        cache = createEmptyLocalCache();
+      }
+
+      // 确保墓碑数组存在
+      if (!cache.tombstones) {
+        cache.tombstones = [];
+      }
+
+      // 获取设备标识
+      const browserInfo = getBrowserInfo();
+      const deviceIdentifier = `${browserInfo.browser}/${browserInfo.os}`;
+
+      // 创建墓碑记录
+      const tombstone: Tombstone = {
+        id: bookmarkId,
+        deletedAt: Date.now(),
+        deletedBy: deviceIdentifier
+      };
+
+      // 检查是否已存在相同 ID 的墓碑（避免重复）
+      const existingIndex = cache.tombstones.findIndex(t => t.id === bookmarkId);
+      if (existingIndex >= 0) {
+        // 更新已存在的墓碑
+        cache.tombstones[existingIndex] = tombstone;
+        logger.debug('createTombstoneForBookmark: Updated existing tombstone', { bookmarkId });
+      } else {
+        // 添加新墓碑
+        cache.tombstones.push(tombstone);
+        logger.debug('createTombstoneForBookmark: Created tombstone', { bookmarkId, deviceIdentifier });
+      }
+
+      // 保存更新后的缓存
+      await saveLocalCache(cache);
+      logger.info('createTombstoneForBookmark: Tombstone saved', { bookmarkId, deviceIdentifier });
+    } catch (error) {
+      logger.error('createTombstoneForBookmark: Failed to save tombstone', { bookmarkId, error });
+    }
+  }
 
   async function uploadBookmarks() {
     try {

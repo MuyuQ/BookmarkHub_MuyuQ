@@ -10,14 +10,14 @@
  */
 
 import { Setting } from './setting';
-import { BookmarkInfo, SyncDataInfo, SyncResult, ConflictInfo, SyncData, BackupRecord } from './models';
+import { BookmarkInfo, SyncDataInfo, SyncResult, ConflictInfo, SyncData, BackupRecord, Tombstone } from './models';
 import BookmarkService from './services';
 import { getBookmarks } from './services';
 import { formatBookmarks, getBookmarkCount, normalizeBookmarkIds } from './bookmarkUtils';
 import { webdavRead, webdavWrite } from './webdav';
 import { handleError, createError } from './errors';
 import { logger, logSync } from './logger';
-import { mergeBookmarks as mergeBookmarksImpl, ConflictMode as MergeConflictMode, MergeResult } from './merge';
+import { threeWayMerge, ThreeWayMergeResult, ConflictMode as MergeConflictMode } from './merge';
 import { STORAGE_KEYS, BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS } from './constants';
 import { Bookmarks } from 'wxt/browser';
 import { getLocalCache, saveLocalCache, createBackupRecord, createEmptyLocalCache } from './localCache';
@@ -324,79 +324,90 @@ export async function performSync(): Promise<SyncResult> {
             logger.info('performSync: 远程书签ID标准化完成');
         }
         
-        /* ========== 合并逻辑暂时注释掉 - 测试用 START ==========
-        // 5. 智能合并书签 (使用 merge.ts 中的实现)
-        logger.info('performSync: 步骤 5 - 智能合并书签...');
-        const mergeResult = mergeBookmarksImpl(
-            localBookmarks,
-            remoteData,
-            setting.conflictMode as MergeConflictMode
-        );
-        logger.info('performSync: 合并完成', {
+        // 5. 获取本地缓存作为基准点（baseline）
+        logger.info('performSync: 步骤5 - 获取本地缓存作为基准点...');
+        const localCache = await getLocalCache();
+        const baseline = localCache?.backupRecords?.[0]?.bookmarkData || null;
+        const localTombstones = localCache?.tombstones || [];
+        logger.info('performSync: 基准点获取完成', {
+            hasBaseline: !!baseline,
+            baselineCount: baseline ? getBookmarkCount(baseline) : 0,
+            localTombstones: localTombstones.length
+        });
+
+        // 6. 提取远程墓碑（如果是 v2.0 格式）
+        const remoteTombstones = (remoteData && isSyncData(remoteData))
+            ? (remoteData as SyncData).tombstones || []
+            : [];
+        logger.info('performSync: 远程墓碑提取完成', { remoteTombstones: remoteTombstones.length });
+
+        // 7. 执行三向合并
+        logger.info('performSync: 步骤7 - 执行三向合并...');
+        const mergeResult = threeWayMerge({
+            baseline,
+            local: localBookmarks,
+            remote: remoteBookmarks,
+            localTombstones,
+            remoteTombstones,
+            conflictMode: setting.conflictMode as MergeConflictMode
+        });
+        logger.info('performSync: 三向合并完成', {
             hasChanges: mergeResult.hasChanges,
             mergedCount: getBookmarkCount(mergeResult.merged),
-            conflictCount: mergeResult.conflicts.length
+            conflictCount: mergeResult.conflicts.length,
+            tombstoneCount: mergeResult.tombstones.length,
+            changeSummary: mergeResult.changeSummary
         });
-        
-        // 6. 如果有变更，上传合并后的数据
+
+        // 8. 如果有变更，上传合并后的数据
         if (mergeResult.hasChanges) {
-            logger.info('performSync: 步骤 6 - 有变更，上传合并后的数据...');
-            await uploadBookmarks(mergeResult.merged);
+            logger.info('performSync: 步骤8 - 有变更，上传合并后的数据...');
+            await uploadBookmarks(mergeResult.merged, mergeResult.tombstones);
             logger.info('performSync: 上传完成');
         } else {
-            logger.info('performSync: 步骤 6 - 无变更，跳过上传');
+            logger.info('performSync: 步骤8 - 无变更，跳过上传');
         }
-        
-        // 7. 设置成功状态和统计
+
+        // 9. 更新本地缓存为新基准点
+        logger.info('performSync: 步骤9 - 更新本地缓存为新基准点...');
+        const newCache: SyncData = {
+            version: '2.0',
+            lastSyncTimestamp: Date.now(),
+            sourceBrowser: {
+                browser: getBrowserName(navigator.userAgent),
+                os: getOsFromUserAgent(navigator.userAgent)
+            },
+            backupRecords: [{
+                backupTimestamp: Date.now(),
+                bookmarkData: mergeResult.merged,
+                bookmarkCount: getBookmarkCount(mergeResult.merged)
+            }],
+            tombstones: mergeResult.tombstones
+        };
+        await saveLocalCache(newCache);
+        logger.info('performSync: 本地缓存更新完成');
+
+        // 10. 设置成功状态和统计
         result.status = 'success';
         result.localCount = localCount;
         result.remoteCount = getBookmarkCount(mergeResult.merged);
         result.conflictCount = mergeResult.conflicts.length;
-        logger.info('performSync: 步骤 7 - 设置成功状态', result);
-        
-        // 8. 保存同步状态
-        logger.info('performSync: 步骤 8 - 保存同步状态...');
+        logger.info('performSync: 步骤10 - 设置成功状态', result);
+
+        // 11. 保存同步状态
+        logger.info('performSync: 步骤11 - 保存同步状态...');
         await saveSyncStatus(result);
         logger.info('performSync: 同步状态保存完成');
-        
-        // 9. 通知 popup 刷新数量显示
-        logger.info('performSync: 步骤 9 - 通知 popup 刷新...');
+
+        // 12. 通知 popup 刷新数量显示
+        logger.info('performSync: 步骤12 - 通知 popup 刷新...');
         try {
             await browser.runtime.sendMessage({ name: 'refreshCounts' });
             logger.info('performSync: popup 通知发送成功');
         } catch (e) {
             logger.info('performSync: popup 未打开，忽略通知错误');
         }
-        
-        logSync.success(result.remoteCount);
-        logger.info('========== performSync 成功完成 ==========');
-        ========== 合并逻辑暂时注释掉 - 测试用 END ========== */
-        
-        // 5. 直接上传本地书签（跳过合并）
-        logger.info('performSync: 步骤 5 - 直接上传本地书签（合并已禁用）...');
-        await uploadBookmarks(localBookmarks);
-        logger.info('performSync: 上传完成');
-        
-        // 6. 设置成功状态和统计
-        result.status = 'success';
-        result.localCount = localCount;
-        result.remoteCount = localCount;
-        logger.info('performSync: 步骤 6 - 设置成功状态', result);
-        
-        // 7. 保存同步状态
-        logger.info('performSync: 步骤 7 - 保存同步状态...');
-        await saveSyncStatus(result);
-        logger.info('performSync: 同步状态保存完成');
-        
-        // 8. 通知 popup 刷新数量显示
-        logger.info('performSync: 步骤 8 - 通知 popup 刷新...');
-        try {
-            await browser.runtime.sendMessage({ name: 'refreshCounts' });
-            logger.info('performSync: popup 通知发送成功');
-        } catch (e) {
-            logger.info('performSync: popup 未打开，忽略通知错误');
-        }
-        
+
         logSync.success(result.remoteCount);
         logger.info('========== performSync 成功完成 ==========');
         
@@ -506,25 +517,18 @@ async function fetchRemoteData(setting: Setting): Promise<SyncData | SyncDataInf
 /**
  * 上传书签数据
  * 根据存储类型上传到 GitHub Gist 或 WebDAV
- * 上传前会先保存现有远程数据到本地备份
- * 
- * @param bookmarks - 要上传的书签数据
- */
-
-/**
- * 上传书签数据
- * 根据存储类型上传到 GitHub Gist 或 WebDAV
  * 上传前会先保存现有远程数据到备份记录
- * 
+ *
  * @param bookmarks - 要上传的书签数据
+ * @param tombstones - 合并后的墓碑数据（可选）
  */
-async function uploadBookmarks(bookmarks: BookmarkInfo[]): Promise<void> {
+async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[] = []): Promise<void> {
     const setting = await Setting.build();
-    
+
     // 步骤1: 获取现有远程数据
     logger.info('uploadBookmarks: 步骤1 - 获取现有远程数据...');
     const existingData = await fetchRemoteData(setting);
-    
+
     // 步骤2: 创建新的备份记录
     logger.info('uploadBookmarks: 步骤2 - 创建新的备份记录...');
     const newRecord: BackupRecord = {
@@ -532,7 +536,7 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[]): Promise<void> {
         bookmarkData: bookmarks,
         bookmarkCount: getBookmarkCount(bookmarks)
     };
-    
+
     // 步骤3: 构建 v2.0 格式的数据
     logger.info('uploadBookmarks: 步骤3 - 构建 v2.0 格式数据...');
     const uploadData: SyncData = {
@@ -542,7 +546,8 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[]): Promise<void> {
             browser: getBrowserName(navigator.userAgent),
             os: getOsFromUserAgent(navigator.userAgent)
         },
-        backupRecords: [newRecord]
+        backupRecords: [newRecord],
+        tombstones: tombstones
     };
     
     // 步骤4: 追加现有数据（迁移旧格式）
@@ -619,26 +624,31 @@ function getOsFromUserAgent(userAgent: string): string {
 
 /**
  * 保存备份数据到本地存储
+ *
+ * @param bookmarks - 书签数据
+ * @param tombstones - 墓碑数据（可选）
  */
-async function saveBackupToLocalStorage(bookmarks: BookmarkInfo[]): Promise<void> {
+async function saveBackupToLocalStorage(bookmarks: BookmarkInfo[], tombstones: Tombstone[] = []): Promise<void> {
     try {
         const existingCache = await getLocalCache();
         const localCache = existingCache || createEmptyLocalCache();
-        
+
         const newBackupRecord = createBackupRecord(bookmarks);
-        
+
         const updatedCache: SyncData = {
             version: '2.0',
             lastSyncTimestamp: Date.now(),
             sourceBrowser: localCache.sourceBrowser,
-            backupRecords: [newBackupRecord, ...localCache.backupRecords].slice(0, BACKUP_DEFAULTS.MAX_BACKUPS)
+            backupRecords: [newBackupRecord, ...localCache.backupRecords].slice(0, BACKUP_DEFAULTS.MAX_BACKUPS),
+            tombstones: tombstones.length > 0 ? tombstones : localCache.tombstones
         };
-        
+
         await saveLocalCache(updatedCache);
-        
+
         logger.info('saveBackupToLocalStorage: 备份保存成功', {
             bookmarkCount: newBackupRecord.bookmarkCount,
-            totalBackups: updatedCache.backupRecords.length
+            totalBackups: updatedCache.backupRecords.length,
+            tombstoneCount: updatedCache.tombstones?.length || 0
         });
     } catch (error) {
         logger.error('saveBackupToLocalStorage: 备份保存失败', error);

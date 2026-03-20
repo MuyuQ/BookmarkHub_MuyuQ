@@ -273,6 +273,24 @@ export interface BackupRecord {
 }
 
 /**
+ * 墓碑记录接口
+ * 用于记录已删除的书签，支持分布式同步中的删除传播
+ *
+ * 墓碑机制用于解决删除传播问题：
+ * - 当设备 A 删除书签后，需要通知设备 B
+ * - 设备 B 可能还没同步，本地还有该书签
+ * - 墓碑记录哪些书签被删除了，防止"复活"
+ */
+export interface Tombstone {
+    /** 被删除书签的稳定 ID（浏览器书签 ID） */
+    id: string;
+    /** 删除时间戳（毫秒） */
+    deletedAt: number;
+    /** 删除设备标识（浏览器 + OS） */
+    deletedBy: string;
+}
+
+/**
  * 同步数据接口 (新格式)
  * 用于存储带有历史记录的同步数据
  * 替代原有的 SyncDataInfo 类
@@ -286,4 +304,6 @@ export interface SyncData {
     sourceBrowser: BrowserInfo;
     /** 备份记录数组（按时间倒序排列，最新在第一位） */
     backupRecords: BackupRecord[];
+    /** 墓碑记录数组（记录已删除的书签，用于删除传播） */
+    tombstones?: Tombstone[];
 }

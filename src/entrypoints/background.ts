@@ -82,6 +82,7 @@ export default defineBackground(() => {
     }).catch((error) => {
       // P1-10: Log error but don't block queue continuation
       logger.error('Operation queue error', error);
+      rejectFunc(error); // 必须传播错误，否则调用方会无限等待
     });
     
     return resultPromise;

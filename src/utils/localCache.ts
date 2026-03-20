@@ -5,7 +5,7 @@
  * 提供缓存的获取、保存、验证等功能
  */
 
-import { BookmarkInfo, SyncData, BackupRecord, BrowserInfo } from './models';
+import { BookmarkInfo, SyncData, BackupRecord, BrowserInfo, Tombstone } from './models';
 import { BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS } from './constants';
 import { getBrowserInfo } from './browserInfo';
 import { getBookmarkCount } from './bookmarkUtils';
@@ -21,11 +21,15 @@ export async function getLocalCache(): Promise<SyncData | null> {
     try {
         const result = await browser.storage.local.get(BACKUP_STORAGE_KEYS.LOCAL_CACHE_KEY);
         const cache = result[BACKUP_STORAGE_KEYS.LOCAL_CACHE_KEY];
-        
+
         if (cache && validateSyncData(cache)) {
+            // 向后兼容：确保 tombstones 字段存在
+            if (!cache.tombstones) {
+                cache.tombstones = [];
+            }
             return cache;
         }
-        
+
         return null;
     } catch (error) {
         logger.error('getLocalCache: Failed to get local cache', { error });
@@ -63,7 +67,8 @@ export function createEmptyLocalCache(): SyncData {
         version: '2.0',
         lastSyncTimestamp: 0,
         sourceBrowser: { browser: 'Unknown', os: 'Unknown' },
-        backupRecords: []
+        backupRecords: [],
+        tombstones: []
     };
 }
 
@@ -122,12 +127,12 @@ export function validateSyncData(data: SyncData): boolean {
     if (!data) {
         return false;
     }
-    
+
     // 验证 version 字段（可选，向后兼容）
     if (data.version && typeof data.version !== 'string') {
         return false;
     }
-    
+
     if (typeof data.lastSyncTimestamp !== 'number') {
         return false;
     }
@@ -137,7 +142,12 @@ export function validateSyncData(data: SyncData): boolean {
     if (!Array.isArray(data.backupRecords)) {
         return false;
     }
-    
+
+    // 验证 tombstones 字段（可选，向后兼容）
+    if (data.tombstones !== undefined && !Array.isArray(data.tombstones)) {
+        return false;
+    }
+
     return validateBackupRecords(data.backupRecords);
 }
 
@@ -167,17 +177,18 @@ export function createBackupRecord(
  * @returns SyncData 新的同步数据
  */
 export function createSyncData(
-    bookmarkData: BookmarkInfo[], 
+    bookmarkData: BookmarkInfo[],
     maxBackups: number = BACKUP_DEFAULTS.MAX_BACKUPS
 ): SyncData {
     const now = Date.now();
     const backupRecord = createBackupRecord(bookmarkData, now);
-    
+
     return {
         version: '2.0',
         lastSyncTimestamp: now,
         sourceBrowser: getBrowserInfo(),
-        backupRecords: [backupRecord].slice(0, maxBackups)
+        backupRecords: [backupRecord].slice(0, maxBackups),
+        tombstones: []
     };
 }
 

@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp:*)",
+      "Bash(ip route:*)",
+      "Bash(curl:*)",
+      "Bash(timeout:*)",
+      "Bash(npm search:*)",
+      "Bash(npm run:*)",
+      "Read(//usr/**)",
+      "Bash(where node:*)",
+      "Read(//proc/**)",
+      "Bash(cmd //c \"where node\")",
+      "Bash(powershell -Command \"Get-Command node\")",
+      "Bash(/c/Users/Muyu/.real/.bin/node/node.exe --version)",
+      "Bash(/c/Users/Muyu/.real/.bin/node/npm.cmd --version)",
+      "Bash(/c/Users/Muyu/.real/.bin/node/npm.cmd run:*)",
+      "Bash(./node_modules/.bin/vitest.cmd run:*)",
+      "Bash(./node_modules/.bin/vitest run:*)",
+      "Bash(/c/Users/Muyu/.real/.bin/node/node.exe ./node_modules/vitest/vitest.mjs run 2>&1)",
+      "Bash(/c/Users/Muyu/.real/.bin/node/npm.cmd install:*)",
+      "Bash(export PATH=\"/c/Users/Muyu/.real/.bin/node:$PATH\")",
+      "Bash(npm --version)"
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import { BookmarkInfo, SyncDataInfo, ConflictInfo, Tombstone } from './models';
 import { BookmarkChange, detectChanges, ChangeDetectionResult } from './changeDetection';
 import { logger } from './logger';
+import { getBookmarkCount } from './bookmarkUtils';
 
 export type ConflictMode = 'auto' | 'prompt';
 
@@ -60,6 +61,9 @@ interface ResolvedConflict {
   isConflict: boolean;
 }
 
+/**
+ * @deprecated Use threeWayMerge instead. This function will be removed in a future version.
+ */
 export function mergeBookmarks(
   local: BookmarkInfo[],
   remote: SyncDataInfo | null,
@@ -126,10 +130,8 @@ function findConflicts(
   for (const l of local.changes) {
     for (const r of remote.changes) {
       if (l.bookmark.id === r.bookmark.id) {
-        // P1-14: Skip non-conflicting scenarios - created/deleted on both sides
         if (l.type === 'created' && r.type === 'created') continue;
         if (l.type === 'deleted' && r.type === 'deleted') continue;
-        
         conflicts.push({ local: l, remote: r });
       }
     }
@@ -202,7 +204,6 @@ function applyChanges(
 function addBookmarkToTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {
     if (!bookmark.parentId) {
         tree.push(bookmark);
-        logger.debug('addBookmarkToTree: 添加根级书签', { title: bookmark.title, url: bookmark.url });
         return;
     }
     
@@ -210,16 +211,7 @@ function addBookmarkToTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {
     if (parent) {
         if (!parent.children) parent.children = [];
         parent.children.push(bookmark);
-        logger.debug('addBookmarkToTree: 添加到父文件夹', { 
-            title: bookmark.title, 
-            parentId: bookmark.parentId,
-            parentTitle: parent.title 
-        });
     } else {
-        logger.warn('addBookmarkToTree: 找不到父文件夹，添加到根级别', { 
-            title: bookmark.title, 
-            parentId: bookmark.parentId 
-        });
         tree.push(bookmark);
     }
 }
@@ -233,7 +225,6 @@ function updateBookmarkInTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): voi
 }
 
 function removeBookmarkFromTree(tree: BookmarkInfo[], id: string, depth: number = 0): void {
-  // P1-13: Prevent stack overflow
   if (depth > MAX_RECURSION_DEPTH) {
     logger.warn('Max recursion depth exceeded in removeBookmarkFromTree');
     return;
@@ -252,7 +243,6 @@ function removeBookmarkFromTree(tree: BookmarkInfo[], id: string, depth: number 
 }
 
 function findBookmarkById(tree: BookmarkInfo[], id: string, depth: number = 0): BookmarkInfo | undefined {
-  // P1-13: Prevent stack overflow from deeply nested bookmarks
   if (depth > MAX_RECURSION_DEPTH) {
     logger.warn('Max recursion depth exceeded in findBookmarkById');
     return undefined;
@@ -314,9 +304,9 @@ export function threeWayMerge(params: ThreeWayMergeParams): ThreeWayMergeResult 
   }
 
   logger.debug('三向合并: 开始检测变更', {
-    baselineCount: countBookmarks(baseline),
-    localCount: countBookmarks(local),
-    remoteCount: countBookmarks(remote),
+    baselineCount: getBookmarkCount(baseline),
+    localCount: getBookmarkCount(local),
+    remoteCount: getBookmarkCount(remote),
     localTombstones: localTombstones.length,
     remoteTombstones: remoteTombstones.length
   });

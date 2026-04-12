@@ -5,7 +5,7 @@ import optionsStorage from '../utils/optionsStorage'
 import iconLogo from '../assets/icon.png'
 import { OperType, BookmarkInfo, SyncDataInfo, RootBookmarksType, BrowserType } from '../utils/models'
 import { Bookmarks } from 'wxt/browser'
-import { getBookmarkCount, formatBookmarks } from '../utils/bookmarkUtils'
+import { getBookmarkCount, formatBookmarks, normalizeBookmarkIds } from '../utils/bookmarkUtils'
 import { createError, handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
 import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS } from '../utils/constants'
@@ -200,7 +200,6 @@ export default defineBackground(() => {
   });
   browser.bookmarks.onCreated.addListener((id, info) => {
     if (curOperType === OperType.NONE) {
-      // console.log("onCreated", id, info)
       browser.action.setBadgeText({ text: "!" });
       browser.action.setBadgeBackgroundColor({ color: "#F00" });
       refreshLocalCount();
@@ -208,21 +207,18 @@ export default defineBackground(() => {
   });
   browser.bookmarks.onChanged.addListener((id, info) => {
     if (curOperType === OperType.NONE) {
-      // console.log("onChanged", id, info)
       browser.action.setBadgeText({ text: "!" });
       browser.action.setBadgeBackgroundColor({ color: "#F00" });
     }
   })
   browser.bookmarks.onMoved.addListener((id, info) => {
     if (curOperType === OperType.NONE) {
-      // console.log("onMoved", id, info)
       browser.action.setBadgeText({ text: "!" });
       browser.action.setBadgeBackgroundColor({ color: "#F00" });
     }
   })
   browser.bookmarks.onRemoved.addListener((id, info) => {
     if (curOperType === OperType.NONE) {
-      // console.log("onRemoved", id, info)
       // 创建墓碑记录，防止删除的书签被"复活"
       createTombstoneForBookmark(id, info).catch(err => {
         logger.error('onRemoved: Failed to create tombstone', { id, error: err });
@@ -601,55 +597,5 @@ async function refreshLocalCount() {
     await browser.storage.local.set({ [STORAGE_KEYS.LOCAL_COUNT]: count });
   }
 
-
-  function formatBookmarks(bookmarks: BookmarkInfo[]): BookmarkInfo[] | undefined {
-    if (bookmarks[0].children) {
-      for (let a of bookmarks[0].children) {
-        if (ROOT_NODE_IDS.TOOLBAR.includes(a.id as any)) {
-          a.title = RootBookmarksType.ToolbarFolder;
-        } else if (ROOT_NODE_IDS.MENU.includes(a.id as any)) {
-          a.title = RootBookmarksType.MenuFolder;
-        } else if (ROOT_NODE_IDS.UNFILED.includes(a.id as any)) {
-          a.title = RootBookmarksType.UnfiledFolder;
-        } else if (ROOT_NODE_IDS.MOBILE.includes(a.id as any)) {
-          a.title = RootBookmarksType.MobileFolder;
-        }
-      }
-    }
-
-    let a = format(bookmarks[0]);
-    return a.children;
-  }
-
-  function format(b: BookmarkInfo): BookmarkInfo {
-    b.dateAdded = undefined;
-    b.dateGroupModified = undefined;
-    b.id = "";
-    b.index = undefined;
-    b.parentId = undefined;
-    b.type = undefined;
-    b.unmodifiable = undefined;
-    if (b.children && b.children.length > 0) {
-      b.children?.map(c => format(c))
-    }
-    return b;
-  }
-  ///暂时不启用自动备份
-  /*
-  async function backupToLocalStorage(bookmarks: BookmarkInfo[]) {
-      try {
-          let syncdata = new SyncDataInfo();
-          syncdata.version = browser.runtime.getManifest().version;
-          syncdata.createDate = Date.now();
-          syncdata.bookmarks = formatBookmarks(bookmarks);
-          syncdata.browser = navigator.userAgent;
-          const keyname = 'BookmarkHub_backup_' + Date.now().toString();
-          await browser.storage.local.set({ [keyname]: JSON.stringify(syncdata) });
-      }
-      catch (error:any) {
-          console.error(error)
-      }
-  }
-  */
 
 });

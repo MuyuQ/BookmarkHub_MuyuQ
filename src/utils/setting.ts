@@ -5,28 +5,20 @@
  * 用于在代码中方便地获取用户配置
  */
 
-import { Options } from 'webext-options-sync';
 import { getAllDecrypted } from './optionsStorage';
 import { WEBDAV_DEFAULTS } from './constants';
+import optionsStorage from './optionsStorage';
 
 /**
  * 设置基类
  * 定义所有设置的类型和默认值
- * 实现 webext-options-sync 的 Options 接口
  */
-export class SettingBase implements Options {
+export class SettingBase {
     /**
      * 构造函数
      * 初始化所有设置属性
      */
     constructor() { }
-
-    /**
-     * 索引签名
-     * 允许通过字符串索引访问设置属性
-     * 类型为 string | number | boolean 的任意属性
-     */
-    [key: string]: string | number | boolean;
 
     // ==================== GitHub Gist 设置 ====================
 
@@ -84,11 +76,26 @@ export class SettingBase implements Options {
  *   console.log(setting.enableAutoSync);
  */
 export class Setting extends SettingBase {
+    /** 缓存的设置实例 */
+    private static cachedSetting: Setting | null = null;
+    /** 缓存时间戳 */
+    private static cacheTimestamp = 0;
+    /** 缓存有效期 (5秒) */
+    private static readonly CACHE_TTL = 5000;
+
     /**
      * 私有构造函数
      * 防止直接实例化
      */
     private constructor() { super(); }
+
+    /**
+     * 清除缓存（设置变更时调用）
+     */
+    static clearCache(): void {
+        Setting.cachedSetting = null;
+        Setting.cacheTimestamp = 0;
+    }
 
     /**
      * 异步构建方法
@@ -106,6 +113,12 @@ export class Setting extends SettingBase {
      *   }
      */
     static async build(): Promise<Setting> {
+        const now = Date.now();
+        // 返回缓存（如果在有效期内）
+        if (Setting.cachedSetting && now - Setting.cacheTimestamp < Setting.CACHE_TTL) {
+            return Setting.cachedSetting;
+        }
+        
         // 从存储获取所有设置（敏感字段已解密）
         const options = await getAllDecrypted();
         
@@ -137,6 +150,15 @@ export class Setting extends SettingBase {
         // 复制安全设置
         setting.masterPassword = options.masterPassword as string;
 
+        // 更新缓存
+        Setting.cachedSetting = setting;
+        Setting.cacheTimestamp = now;
+
         return setting;
     }
 }
+
+// 监听设置变更，自动清除缓存
+optionsStorage.onChanged(() => {
+    Setting.clearCache();
+});

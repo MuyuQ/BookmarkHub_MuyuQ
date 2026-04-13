@@ -346,5 +346,38 @@
     "confirmDeleteBackup": {
         "message": "确定要删除此备份吗？",
         "description": ""
+    },
+    "weakPasswordWarning": {
+        "message": "密码强度不足：至少需要12个字符，包含大写字母、小写字母、数字和特殊字符",
+        "description": "主密码强度不足警告"
+    },
+    "githubTokenPlaceholder": {
+        "message": "GitHub 令牌",
+        "description": "GitHub 令牌输入框占位符"
+    },
+    "gistIdPlaceholder": {
+        "message": "Gist ID",
+        "description": "Gist ID 输入框占位符"
+    },
+    "gistFileNamePlaceholder": {
+        "message": "Gist 文件名",
+        "description": "Gist 文件名输入框占位符"
+    },
+    "webdavUrlPlaceholder": {
+        "message": "https://your-nas.com/remote.php/dav/files/username/",
+        "description": "WebDAV URL 输入框占位符"
+    },
+    "webdavUsernamePlaceholder": {
+        "message": "用户名",
+        "description": "WebDAV 用户名输入框占位符"
+    },
+    "webdavPasswordPlaceholder": {
+        "message": "密码",
+        "description": "WebDAV 密码输入框占位符"
+    },
+    "webdavPathPlaceholder": {
+        "message": "/bookmarks.json",
+        "description": "WebDAV 路径输入框占位符"
     }
+}
 }

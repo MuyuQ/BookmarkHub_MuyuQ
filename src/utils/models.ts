@@ -154,9 +154,7 @@ export enum RootBookmarksType {
 }
 
 /**
- * 根书签文件夹列表
- * 定义了浏览器的四个主要书签根文件夹
- * 每个浏览器对这些文件夹有不同的ID命名规则
+ * 同步记录接口
  */
 export const rootBookmarks: BookmarkInfo[] = [
     {
@@ -185,22 +183,6 @@ export const rootBookmarks: BookmarkInfo[] = [
         children: []
     }
 ];
-
-/**
- * 同步记录接口
- * 用于记录每次同步操作的详细信息
- * 存储在浏览器本地存储中
- */
-export interface SyncRecord {
-    /** 上次同步时间戳 (毫秒) */
-    lastSyncTime: number;
-    /** 上次同步方向: upload(上传) / download(下载) */
-    lastSyncDirection: 'upload' | 'download';
-    /** 上次同步状态: success(成功) / failed(失败) */
-    lastSyncStatus: 'success' | 'failed';
-    /** 错误信息 (可选) */
-    errorMessage?: string;
-}
 
 /**
  * 同步方向类型

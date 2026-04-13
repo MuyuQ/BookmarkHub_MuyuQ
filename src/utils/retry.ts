@@ -112,7 +112,7 @@ export async function retryOperation<T>(
             // 如果已达到最大重试次数，停止重试
             if (attempt === maxRetries) {
                 if (logRetries) {
-                logger.error(`操作失败，已重试 ${maxRetries} 次:`, lastError.message);
+                    logger.error(`操作失败，已重试 ${maxRetries} 次:`, lastError.message);
                 }
                 break;
             }
@@ -125,58 +125,10 @@ export async function retryOperation<T>(
             // 计算下一次延迟（指数退避 + 随机抖动）
             // 添加 ±25% 的随机抖动，防止多个客户端同时重试导致的"惊群效应"
             const jitter = delay * 0.25 * (Math.random() * 2 - 1); // ±25% jitter
-            delay = Math.min(delay * backoffFactor + jitter, maxDelay);
+            delay = Math.min(delay * backoffFactor, maxDelay) + Math.abs(jitter);
         }
     }
     
     // 所有重试都失败了，抛出最后一个错误
     throw lastError!;
-}
-
-/**
- * 带重试的 fetch 包装器
- * 专门用于网络请求的重试版本
- * 
- * @param url - 请求URL
- * @param init - fetch 初始化参数
- * @param retryOptions - 重试选项
- * @returns Promise<Response> 响应对象
- * 
- * @example
- * const response = await retryFetch(
- *     'https://api.github.com/gists/123',
- *     { headers: { 'Authorization': 'token xxx' } },
- *     { maxRetries: 3 }
- * );
- */
-export async function retryFetch(
-    url: string,
-    init?: RequestInit,
-    retryOptions?: RetryOptions
-): Promise<Response> {
-    return retryOperation(
-        async () => {
-            const response = await fetch(url, init);
-            // HTTP 错误处理：区分可重试和不可重试的错误
-            if (!response.ok) {
-                const status = response.status;
-                
-                // 429 速率限制：需要重试，使用退避策略
-                if (status === 429) {
-                    throw new Error(`HTTP ${status}: Rate limited, will retry`);
-                }
-                
-                // 其他客户端错误（4xx）不重试，直接抛出
-                if (status >= 400 && status < 500) {
-                    throw new Error(`HTTP ${status}: Client error, no retry`);
-                }
-                
-                // 服务器错误（5xx）可以重试
-                throw new Error(`HTTP ${status}: Server error, will retry`);
-            }
-            
-            return response;
-        },
-        retryOptions
-    );
 }

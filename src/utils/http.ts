@@ -20,6 +20,21 @@ let lastRateLimitReset: number = 0;
 let rateLimitPromise: Promise<void> | null = null;
 
 /**
+ * 原子化速率限制等待，防止并发请求创建多个等待 Promise
+ */
+async function waitForRateLimit(waitTime: number, resetTime: number): Promise<void> {
+    if (!rateLimitPromise || Date.now() >= lastRateLimitReset) {
+        if (resetTime > lastRateLimitReset) {
+            lastRateLimitReset = resetTime;
+        }
+        rateLimitPromise = new Promise(resolve => {
+            setTimeout(resolve, waitTime);
+        });
+    }
+    await rateLimitPromise;
+}
+
+/**
  * 创建配置好的 ky HTTP 实例
  * 
  * 功能说明:
@@ -121,24 +136,13 @@ export const http = ky.create({
                             throw new Error(`Rate limit reset time exceeds maximum wait time (${Math.ceil(waitTime / 60000)} minutes > ${Math.ceil(MAX_RATE_LIMIT_WAIT / 60000)} minutes)`);
                         }
                         
-                        // P1-15: Use shared promise to prevent cumulative delays
-                        if (resetTime > lastRateLimitReset) {
-                            lastRateLimitReset = resetTime;
-                        }
-                        
-                        if (!rateLimitPromise || Date.now() >= lastRateLimitReset) {
-                            rateLimitPromise = new Promise(resolve => {
-                                setTimeout(resolve, waitTime);
-                            });
-                        }
-                        
                         logger.warn(`GitHub API 速率限制，等待 ${Math.ceil(waitTime / 1000)} 秒后重试`, { 
                             resetTime: new Date(resetTime).toISOString(), 
                             remaining, 
                             waitTime 
                         });
                         
-                        await rateLimitPromise;
+                        await waitForRateLimit(waitTime, resetTime);
                         throw new Error('Rate limit exceeded, waiting for reset');
                     } else if (response.status === 429) {
                         logger.warn('GitHub API 返回 429，等待 60 秒后重试', { status: 429, delay: 60000 });

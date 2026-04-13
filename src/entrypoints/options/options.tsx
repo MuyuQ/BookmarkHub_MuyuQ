@@ -190,7 +190,7 @@ const Options: React.FC = () => {
                                     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(e.target.value);
                                     setShowPasswordWarning(e.target.value.length > 0 && !(hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar)); 
                                 }} placeholder={browser.i18n.getMessage('leaveEmptyPlaceholder')} size="sm" aria-labelledby="masterPasswordLabel" aria-describedby="masterPasswordHelp" />
-                                {showPasswordWarning && <small id="masterPasswordHelp" className="text-warning d-block mt-1">Weak password: Must be at least 12 characters with uppercase, lowercase, number, and special character</small>}
+                                {showPasswordWarning && <small id="masterPasswordHelp" className="text-warning d-block mt-1">{browser.i18n.getMessage('weakPasswordWarning')}</small>}
                             </Col>
                         </Form.Group>
                         <Form.Group as={Row}>
@@ -208,18 +208,18 @@ const Options: React.FC = () => {
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('githubToken')}</Form.Label>
                             <Col sm={9} lg={10} xs={9}>
                                 <InputGroup size="sm">
-                                    <Form.Control type="password" value={githubToken} onChange={(e) => setGithubToken(e.target.value)} placeholder="github token" size="sm" />
+                                    <Form.Control type="password" value={githubToken} onChange={(e) => setGithubToken(e.target.value)} placeholder={browser.i18n.getMessage('githubTokenPlaceholder')} size="sm" />
                                     <InputGroup.Append><Button variant="outline-secondary" as="a" target="_blank" rel="noopener noreferrer" href="https://github.com/settings/tokens/new" size="sm">{browser.i18n.getMessage('getToken')}</Button></InputGroup.Append>
                                 </InputGroup>
                             </Col>
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('gistID')}</Form.Label>
-                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={gistID} onChange={(e) => setGistID(e.target.value)} placeholder="gist ID" size="sm" /></Col>
+                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={gistID} onChange={(e) => setGistID(e.target.value)} placeholder={browser.i18n.getMessage('gistIdPlaceholder')} size="sm" /></Col>
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('gistFileName')}</Form.Label>
-                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={gistFileName} onChange={(e) => setGistFileName(e.target.value)} placeholder="gist file name" size="sm" /></Col>
+                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={gistFileName} onChange={(e) => setGistFileName(e.target.value)} placeholder={browser.i18n.getMessage('gistFileNamePlaceholder')} size="sm" /></Col>
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('enableNotifications')}</Form.Label>
@@ -258,19 +258,19 @@ const Options: React.FC = () => {
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('webdavUrl')}</Form.Label>
-                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} placeholder="https://your-nas.com/remote.php/dav/files/username/" size="sm" /></Col>
+                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} placeholder={browser.i18n.getMessage('webdavUrlPlaceholder')} size="sm" /></Col>
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('webdavUsername')}</Form.Label>
-                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={webdavUsername} onChange={(e) => setWebdavUsername(e.target.value)} placeholder="username" size="sm" /></Col>
+                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={webdavUsername} onChange={(e) => setWebdavUsername(e.target.value)} placeholder={browser.i18n.getMessage('webdavUsernamePlaceholder')} size="sm" /></Col>
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('webdavPassword')}</Form.Label>
-                            <Col sm={9} lg={10} xs={9}><Form.Control type="password" value={webdavPassword} onChange={(e) => setWebdavPassword(e.target.value)} placeholder="password" size="sm" /></Col>
+                            <Col sm={9} lg={10} xs={9}><Form.Control type="password" value={webdavPassword} onChange={(e) => setWebdavPassword(e.target.value)} placeholder={browser.i18n.getMessage('webdavPasswordPlaceholder')} size="sm" /></Col>
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('webdavPath')}</Form.Label>
-                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={webdavPath} onChange={(e) => setWebdavPath(e.target.value)} placeholder="/bookmarks.json" size="sm" /></Col>
+                            <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={webdavPath} onChange={(e) => setWebdavPath(e.target.value)} placeholder={browser.i18n.getMessage('webdavPathPlaceholder')} size="sm" /></Col>
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}></Form.Label>

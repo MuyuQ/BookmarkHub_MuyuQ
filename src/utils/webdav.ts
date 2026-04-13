@@ -28,19 +28,18 @@ function sanitizePath(path: string): string {
         return '/';
     }
 
-
-    
-    // 解码 URL 编码的路径（防止 ..%2F 绕过）
-    let sanitized: string;
-    try {
-        sanitized = decodeURIComponent(path);
-    } catch {
-        // 如果解码失败，使用原始路径
-        sanitized = path;
+    // 循环解码 URL 编码直到稳定（防止双编码绕过如 %252e%252e）
+    let sanitized = path;
+    let prev = '';
+    while (sanitized !== prev) {
+        prev = sanitized;
+        try {
+            sanitized = decodeURIComponent(sanitized);
+        } catch {
+            break;
+        }
     }
 
-
-    
     // 移除危险的路径模式
     sanitized = sanitized.replace(FORBIDDEN_PATH_PATTERNS, '');
     
@@ -49,8 +48,6 @@ function sanitizePath(path: string): string {
         sanitized = '/' + sanitized;
     }
 
-
-    
     // 规范化多个连续斜杠
     sanitized = sanitized.replace(/\/+/g, '/');
     
@@ -91,30 +88,22 @@ export class WebDAVClient {
             throw new Error('WebDAV URL is required and must be a string');
         }
 
-
-        
         // 检查 URL 协议
         if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
             throw new Error('WebDAV URL must start with http:// or https://');
         }
 
-
-        
         // 验证用户名
         if (!username || typeof username !== 'string' || username.trim() === '') {
             throw new Error('WebDAV username is required and must be non-empty');
         }
 
-
-        
-        // 验证密码 (允许空字符串作为密码，但必须是字符串)
+        // 验证密码
         if (password === undefined || password === null || typeof password !== 'string') {
             throw new Error('WebDAV password is required and must be a string');
         }
 
-
-        
-        // 移除末尾的斜杠，保持 URL 格式一致
+        // 移除末尾的斜杠
         this.baseUrl = baseUrl.replace(/\/$/, '');
         // 立即生成认证头，不存储密码（安全考虑）
         this.authHeader = this.createAuthHeader(username, password);
@@ -136,8 +125,6 @@ export class WebDAVClient {
         return `Basic ${btoa(utf8Credentials)}`;
     }
 
-
-
     /**
      * 生成 Basic Auth 认证头
      * 返回缓存的认证头
@@ -147,7 +134,6 @@ export class WebDAVClient {
     private getAuthHeader(): string {
         return this.authHeader;
     }
-
 
     /**
      * 读取文件
@@ -165,15 +151,11 @@ export class WebDAVClient {
                     headers: {
                         'Authorization': this.getAuthHeader()
                     }
-
-
                 });
 
                 if (!response.ok) {
                     throw new Error(`WebDAV read failed: ${response.status}`);
                 }
-
-
 
                 return await response.text();
             }, { maxRetries: 3, logRetries: true });
@@ -181,11 +163,7 @@ export class WebDAVClient {
             logger.error('WebDAV read error', error);
             return null;
         }
-
-
     }
-
-
 
     /**
      * 写入文件
@@ -213,19 +191,13 @@ export class WebDAVClient {
                     throw new Error(`WebDAV write failed: ${response.status}`);
                 }
 
-
-
                 return true;
             }, { maxRetries: 3, logRetries: true });
         } catch (error) {
             logger.error('WebDAV write error', error);
             return false;
         }
-
-
     }
-
-
 
     /**
      * 检查文件是否存在
@@ -242,16 +214,12 @@ export class WebDAVClient {
                 headers: {
                     'Authorization': this.getAuthHeader()
                 }
-
-
             });
 
             return response.ok;
         } catch {
             return false;
         }
-
-
     }
 
     /**
@@ -264,8 +232,6 @@ export class WebDAVClient {
     public clearCredentials(): void {
         this.authHeader = '';
     }
-
-
 
     /**
      * 删除文件
@@ -283,8 +249,6 @@ export class WebDAVClient {
                     headers: {
                         'Authorization': this.getAuthHeader()
                     }
-
-
                 });
 
                 // 204 No Content 表示删除成功
@@ -295,11 +259,7 @@ export class WebDAVClient {
             logger.error('WebDAV delete error', error);
             return false;
         }
-
-
     }
-
-
 }
 
 /**
@@ -317,14 +277,10 @@ export async function getWebDAVClient(): Promise<WebDAVClient | null> {
         return null;
     }
 
-
-
     // 检查 WebDAV 配置是否完整
     if (!setting.webdavUrl || !setting.webdavUsername || !setting.webdavPassword) {
         return null;
     }
-
-
 
     // 创建并返回客户端实例
     return new WebDAVClient(
@@ -412,20 +368,17 @@ export async function testWebDAVConnection(
             return { success: false, message: 'Failed to write test file' };
         }
 
-
         // 2. 尝试读取测试文件
         const readResult = await client.read(testPath);
         if (readResult !== 'test') {
             return { success: false, message: 'Failed to read test file' };
         }
 
-
         // 3. 删除测试文件
         const deleteResult = await client.remove(testPath);
         if (!deleteResult) {
             return { success: false, message: 'Failed to delete test file' };
         }
-
 
         // 4. 返回成功
         return { success: true, message: 'Connection successful' };

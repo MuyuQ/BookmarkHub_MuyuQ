@@ -8,7 +8,7 @@ import { Bookmarks } from 'wxt/browser'
 import { getBookmarkCount, formatBookmarks, normalizeBookmarkIds } from '../utils/bookmarkUtils'
 import { createError, handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
-import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS } from '../utils/constants'
+import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS, MV3_CONFIG } from '../utils/constants'
 import { getBackupRecords, restoreFromBackup, deleteBackupRecord, getLocalCache, saveLocalCache, createEmptyLocalCache } from '../utils/localCache'
 import { getBrowserInfo } from '../utils/browserInfo'
 import { Tombstone } from '../utils/models'
@@ -40,11 +40,30 @@ export default defineBackground(() => {
     }
   });
 
+  // MV3 Alarm 监听器 - 定时同步触发
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === MV3_CONFIG.SYNC_ALARM_NAME) {
+      logger.info('Alarm 触发定时同步', { alarmName: alarm.name });
+      performSync().catch(err => logger.error('alarm sync failed', err));
+    }
+  });
+
   /**
    * P1-9: Validate message sender to prevent cross-extension attacks
    */
-  function isValidSender(sender: chrome.runtime.MessageSender): boolean {
+  function isValidSender(sender: Parameters<Parameters<typeof browser.runtime.onMessage.addListener>[0]>[1]): boolean {
     return !sender.id || sender.id === browser.runtime.id;
+  }
+
+  /**
+   * 安全调用 sendResponse，防止端口断开导致的错误
+   */
+  function safeSendResponse(sendResponse: (response: unknown) => void, response: unknown): void {
+    try {
+      sendResponse(response);
+    } catch {
+      logger.debug('safeSendResponse: Port disconnected, response dropped');
+    }
   }
 
   /**
@@ -106,7 +125,7 @@ export default defineBackground(() => {
           curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
           refreshLocalCount();
-          sendResponse(true);
+          safeSendResponse(sendResponse, true);
         }
       });
       return true;
@@ -115,7 +134,7 @@ export default defineBackground(() => {
       queueOperation(async () => {
         // 检查是否正在同步
         if (getIsSyncing()) {
-          sendResponse({ 
+          safeSendResponse(sendResponse, { 
             error: 'Sync is already in progress. Please wait.',
             status: 'skipped'
           });
@@ -124,9 +143,9 @@ export default defineBackground(() => {
         curOperType = OperType.SYNC;
         try {
           await downloadBookmarks();
-          sendResponse(true);
+          safeSendResponse(sendResponse, true);
         } catch (error) {
-          sendResponse({ error: handleError(error).message });
+          safeSendResponse(sendResponse, { error: handleError(error).message });
         } finally {
           curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
@@ -140,7 +159,7 @@ export default defineBackground(() => {
         curOperType = OperType.REMOVE;
         try {
           await clearBookmarkTree();
-          sendResponse(true);
+          safeSendResponse(sendResponse, true);
         } finally {
           curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
@@ -151,20 +170,20 @@ export default defineBackground(() => {
     }
     if (msg.name === 'setting') {
       browser.runtime.openOptionsPage().then(() => {
-        sendResponse(true);
+        safeSendResponse(sendResponse, true);
       });
       return true;
     }
     if (msg.name === 'sync') {
       // performSync 内部已有 isSyncing 检查
       performSync().then(result => {
-        sendResponse(result);
+        safeSendResponse(sendResponse, result);
       });
       return true;
     }
     if (msg.name === 'getBackupRecords') {
       getBackupRecords().then(records => {
-        sendResponse(records);
+        safeSendResponse(sendResponse, records);
       });
       return true;
     }
@@ -174,15 +193,15 @@ export default defineBackground(() => {
         try {
           const bookmarks = await restoreFromBackup(msg.timestamp);
           if (!bookmarks) {
-            sendResponse({ error: 'Backup not found' });
+            safeSendResponse(sendResponse, { error: 'Backup not found' });
             return;
           }
           await clearBookmarkTree();
           await createBookmarkTree(bookmarks);
           refreshLocalCount();
-          sendResponse({ success: true, count: getBookmarkCount(bookmarks) });
+          safeSendResponse(sendResponse, { success: true, count: getBookmarkCount(bookmarks) });
         } catch (error) {
-          sendResponse({ error: handleError(error).message });
+          safeSendResponse(sendResponse, { error: handleError(error).message });
         } finally {
           curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
@@ -192,7 +211,7 @@ export default defineBackground(() => {
     }
     if (msg.name === 'deleteBackupRecord') {
       deleteBackupRecord(msg.timestamp).then(success => {
-        sendResponse({ success });
+        safeSendResponse(sendResponse, { success });
       });
       return true;
     }
@@ -320,7 +339,7 @@ export default defineBackground(() => {
     }
     catch (error: unknown) {
       const err = handleError(error);
-      console.error(err.toLogString());
+      logger.error(err.toLogString());
       await showErrorNotification('uploadBookmarks', err.toUserString());
     }
   }
@@ -404,7 +423,7 @@ export default defineBackground(() => {
     }
     catch (error: unknown) {
       const err = handleError(error);
-      console.error(err.toLogString());
+      logger.error(err.toLogString());
       await showErrorNotification('downloadBookmarks', err.toUserString());
     }
   }

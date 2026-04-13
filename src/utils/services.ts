@@ -12,9 +12,7 @@
 import { Setting } from './setting';
 import { http } from './http';
 import { BookmarkInfo } from './models';
-import { getBookmarkCount, formatBookmarks } from './bookmarkUtils';
 import { retryOperation } from './retry';
-import { extractBrowserFromUA, extractOSFromUA } from './browserInfo';
 import { logger } from './logger';
 
 /**
@@ -43,12 +41,6 @@ function sanitizeToken(errorMessage: string, token: string): string {
     }
     return errorMessage.replace(new RegExp(escapeRegex(token), 'g'), '[REDACTED]');
 }
-
-// 重新导出工具函数，保持向后兼容
-/** @deprecated Use getBookmarkCount from './bookmarkUtils' directly */
-export { getBookmarkCount };
-/** @deprecated Use formatBookmarks from './bookmarkUtils' directly */
-export { formatBookmarks };
 
 /**
  * GitHub Gist 文件接口

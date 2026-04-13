@@ -498,5 +498,37 @@
     "confirmDeleteBackup": {
         "message": "Delete this backup?",
         "description": ""
+    },
+    "weakPasswordWarning": {
+        "message": "Weak password: Must be at least 12 characters with uppercase, lowercase, number, and special character",
+        "description": "Warning message for weak master password"
+    },
+    "githubTokenPlaceholder": {
+        "message": "GitHub token",
+        "description": "Placeholder for GitHub token input"
+    },
+    "gistIdPlaceholder": {
+        "message": "Gist ID",
+        "description": "Placeholder for Gist ID input"
+    },
+    "gistFileNamePlaceholder": {
+        "message": "Gist file name",
+        "description": "Placeholder for Gist file name input"
+    },
+    "webdavUrlPlaceholder": {
+        "message": "https://your-nas.com/remote.php/dav/files/username/",
+        "description": "Placeholder for WebDAV URL input"
+    },
+    "webdavUsernamePlaceholder": {
+        "message": "Username",
+        "description": "Placeholder for WebDAV username input"
+    },
+    "webdavPasswordPlaceholder": {
+        "message": "Password",
+        "description": "Placeholder for WebDAV password input"
+    },
+    "webdavPathPlaceholder": {
+        "message": "/bookmarks.json",
+        "description": "Placeholder for WebDAV path input"
     }
 }

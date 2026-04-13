@@ -18,9 +18,10 @@ import { webdavRead, webdavWrite } from './webdav';
 import { handleError, createError } from './errors';
 import { logger, logSync } from './logger';
 import { threeWayMerge, ThreeWayMergeResult, ConflictMode as MergeConflictMode } from './merge';
-import { STORAGE_KEYS, BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS } from './constants';
+import { STORAGE_KEYS, BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS, MV3_CONFIG } from './constants';
 import { Bookmarks } from 'wxt/browser';
-import { getLocalCache, saveLocalCache, createBackupRecord, createEmptyLocalCache } from './localCache';
+import { getLocalCache, saveLocalCache } from './localCache';
+import { syncDebouncer } from './debounce';
 
 /**
  * 同步模式类型定义
@@ -31,10 +32,13 @@ import { getLocalCache, saveLocalCache, createBackupRecord, createEmptyLocalCach
 export type SyncMode = 'interval' | 'event' | 'hybrid';
 
 /**
- * 定时同步的 timer ID
- * 用于停止定时同步
+ * 同步锁状态 (持久化到 storage 以支持 MV3 Service Worker 休眠恢复)
  */
-let syncTimerId: ReturnType<typeof setInterval> | null = null;
+interface SyncState {
+    isSyncing: boolean;
+    isSuppressingEvents: boolean;
+    timestamp: number;
+}
 
 /**
  * 同步锁
@@ -74,8 +78,8 @@ const syncListeners = {
     logger.info('>>> syncListeners.onStartup 触发');
     logger.info(`onStartup: isSuppressingEvents=${isSuppressingEvents}`);
     if (!isSuppressingEvents) {
-      logger.info('onStartup: 调用 performSync()');
-      performSync();
+      logger.info('onStartup: 调用 syncDebouncer.triggerSync()');
+      syncDebouncer.triggerSync().catch(err => logger.error('onStartup sync failed', err));
     } else {
       logger.info('onStartup: 跳过，事件正在被抑制');
     }
@@ -84,8 +88,8 @@ const syncListeners = {
     logger.info('>>> syncListeners.onCreated 触发', { id, title: bookmark.title, url: bookmark.url });
     logger.info(`onCreated: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
     if (!isSuppressingEvents) {
-      logger.info('onCreated: 调用 performSync()');
-      performSync();
+      logger.info('onCreated: 调用 syncDebouncer.triggerSync()');
+      syncDebouncer.triggerSync().catch(err => logger.error('onCreated sync failed', err));
     } else {
       logger.info('onCreated: 跳过，事件正在被抑制');
     }
@@ -94,8 +98,8 @@ const syncListeners = {
     logger.info('>>> syncListeners.onChanged 触发', { id, changeInfo });
     logger.info(`onChanged: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
     if (!isSuppressingEvents) {
-      logger.info('onChanged: 调用 performSync()');
-      performSync();
+      logger.info('onChanged: 调用 syncDebouncer.triggerSync()');
+      syncDebouncer.triggerSync().catch(err => logger.error('onChanged sync failed', err));
     } else {
       logger.info('onChanged: 跳过，事件正在被抑制');
     }
@@ -104,8 +108,8 @@ const syncListeners = {
     logger.info('>>> syncListeners.onMoved 触发', { id, moveInfo });
     logger.info(`onMoved: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
     if (!isSuppressingEvents) {
-      logger.info('onMoved: 调用 performSync()');
-      performSync();
+      logger.info('onMoved: 调用 syncDebouncer.triggerSync()');
+      syncDebouncer.triggerSync().catch(err => logger.error('onMoved sync failed', err));
     } else {
       logger.info('onMoved: 跳过，事件正在被抑制');
     }
@@ -114,8 +118,8 @@ const syncListeners = {
     logger.info('>>> syncListeners.onRemoved 触发', { id, removeInfo });
     logger.info(`onRemoved: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
     if (!isSuppressingEvents) {
-      logger.info('onRemoved: 调用 performSync()');
-      performSync();
+      logger.info('onRemoved: 调用 syncDebouncer.triggerSync()');
+      syncDebouncer.triggerSync().catch(err => logger.error('onRemoved sync failed', err));
     } else {
       logger.info('onRemoved: 跳过，事件正在被抑制');
     }
@@ -129,17 +133,71 @@ const syncListeners = {
 let listenersRegistered = false;
 
 /**
+ * 持久化同步状态 (MV3 Service Worker 休眠恢复)
+ */
+async function saveSyncState(): Promise<void> {
+    try {
+        const state: SyncState = {
+            isSyncing,
+            isSuppressingEvents,
+            timestamp: Date.now(),
+        };
+        await browser.storage.local.set({ [BACKUP_STORAGE_KEYS.SYNC_STATE_KEY]: state });
+    } catch (error) {
+        logger.error('saveSyncState failed', error);
+    }
+}
+
+/**
+ * 恢复同步状态 (MV3 Service Worker 唤醒时调用)
+ */
+async function restoreSyncState(): Promise<void> {
+    try {
+        const result = await browser.storage.local.get(BACKUP_STORAGE_KEYS.SYNC_STATE_KEY);
+        const state = result[BACKUP_STORAGE_KEYS.SYNC_STATE_KEY] as SyncState | undefined;
+        if (state) {
+            // 如果状态超过 5 分钟，认为是过期的 (Service Worker 休眠后)
+            if (Date.now() - state.timestamp > 5 * 60 * 1000) {
+                isSyncing = false;
+                isSuppressingEvents = false;
+                logger.info('restoreSyncState: Cleared stale sync state');
+            } else {
+                isSyncing = state.isSyncing;
+                isSuppressingEvents = state.isSuppressingEvents;
+                logger.info('restoreSyncState: Restored sync state', { isSyncing, isSuppressingEvents });
+            }
+        }
+    } catch (error) {
+        logger.error('restoreSyncState failed', error);
+    }
+}
+
+/**
+ * 清除持久化同步状态
+ */
+async function clearSyncState(): Promise<void> {
+    try {
+        await browser.storage.local.remove(BACKUP_STORAGE_KEYS.SYNC_STATE_KEY);
+    } catch (error) {
+        logger.error('clearSyncState failed', error);
+    }
+}
+
+/**
  * 启动自动同步
  * 根据设置中的配置启动相应的同步机制
  * 
  * 执行逻辑:
  * 1. 检查是否启用了自动同步
- * 2. 停止现有的定时器
+ * 2. 停止现有的定时器和 Alarm
  * 3. 根据同步模式启动定时同步和/或事件监听
  * 
  * @see stopAutoSync 停止自动同步
  */
 export async function startAutoSync(): Promise<void> {
+    // 恢复持久化状态 (MV3 Service Worker 休眠恢复)
+    await restoreSyncState();
+
     // 获取设置
     const setting = await Setting.build();
     
@@ -151,7 +209,8 @@ export async function startAutoSync(): Promise<void> {
         enableEventSync: setting.enableEventSync,
         syncInterval: setting.syncInterval,
         listenersRegistered,
-        syncTimerId: syncTimerId !== null
+        isSyncing,
+        isSuppressingEvents
     });
     // ========== 诊断日志 END ==========
     
@@ -161,20 +220,27 @@ export async function startAutoSync(): Promise<void> {
         return;
     }
     
-    // 先停止现有的定时器，避免重复启动
+    // 先停止现有的定时器和 Alarm，避免重复启动
     stopAutoSync();
     
-    // 计算同步间隔 (毫秒)
-    const intervalMs = setting.syncInterval * 60 * 1000;
+    // 配置防抖器
+    syncDebouncer.setSyncCallback(async () => {
+        await performSync().catch(err => logger.error('syncDebouncer callback failed', err));
+    });
+    syncDebouncer.updateConfig({
+        debounceTime: BACKUP_DEFAULTS.DEBOUNCE_TIME,
+        maxWaitTime: BACKUP_DEFAULTS.MAX_WAIT_TIME,
+    });
     
-    // 定时同步模式
+    // 定时同步模式 - 使用 Alarm API (MV3 兼容)
     if (setting.enableIntervalSync) {
-        // 设置定时器，按间隔执行同步
-        syncTimerId = setInterval(() => {
-            logger.info('定时同步触发 - setInterval 回调执行');
-            performSync();
-        }, intervalMs);
-        logger.info(`startAutoSync: 定时同步已启动，间隔 ${setting.syncInterval} 分钟 (${intervalMs}ms)`);
+        const intervalMinutes = setting.syncInterval / 60; // 转换为分钟
+        if (browser.alarms) {
+            browser.alarms.create(MV3_CONFIG.SYNC_ALARM_NAME, {
+                periodInMinutes: Math.max(intervalMinutes, 1), // Alarm API 最小间隔 1 分钟
+            });
+        }
+        logger.info(`startAutoSync: 定时同步已启动 (Alarm)，间隔 ${setting.syncInterval} 分钟`);
     } else {
         logger.info('startAutoSync: 定时同步未启用');
     }
@@ -216,19 +282,25 @@ export async function startAutoSync(): Promise<void> {
 
 /**
  * 停止自动同步
- * 清除定时器，停止自动同步
+ * 清除定时器和 Alarm，停止自动同步
  * 
  * @see startAutoSync 启动自动同步
  */
 export function stopAutoSync(): void {
     logger.info('========== stopAutoSync 被调用 ==========');
-    logger.info(`stopAutoSync: syncTimerId=${syncTimerId !== null}, listenersRegistered=${listenersRegistered}`);
+    logger.info(`stopAutoSync: listenersRegistered=${listenersRegistered}`);
     
-    if (syncTimerId !== null) {
-        clearInterval(syncTimerId);
-        syncTimerId = null;
-        logger.info('stopAutoSync: 定时器已清除');
+    // 清除 Alarm (MV3 兼容)
+    if (browser.alarms) {
+        browser.alarms.clear(MV3_CONFIG.SYNC_ALARM_NAME).then(cleared => {
+            if (cleared) {
+                logger.info('stopAutoSync: Alarm 已清除');
+            }
+        });
     }
+    
+    // 取消防抖器
+    syncDebouncer.cancel();
     
     if (listenersRegistered) {
         logger.info('stopAutoSync: 移除事件监听器...');
@@ -423,6 +495,8 @@ export async function performSync(): Promise<SyncResult> {
         isSyncing = false;
         isSuppressingEvents = false;
         logger.info(`performSync: 释放同步锁 isSyncing=false, isSuppressingEvents=false`);
+        // 持久化状态 (MV3 Service Worker 休眠恢复)
+        await saveSyncState();
     }
     
     return result;
@@ -433,10 +507,9 @@ export async function performSync(): Promise<SyncResult> {
  * @param obj - The data object to check
  */
 function isSyncDataInfo(obj: unknown): obj is SyncDataInfo {
-    return obj != null && 
-           typeof obj === 'object' &&
-           'bookmarks' in obj && 
-           !('version' in obj && obj.version === '2.0');
+    if (obj == null || typeof obj !== 'object') return false;
+    if ('version' in obj && (obj as Record<string, unknown>).version === '2.0') return false;
+    return 'bookmarks' in obj && Array.isArray((obj as Record<string, unknown>).bookmarks);
 }
 
 /**
@@ -623,39 +696,6 @@ function getOsFromUserAgent(userAgent: string): string {
 }
 
 /**
- * 保存备份数据到本地存储
- *
- * @param bookmarks - 书签数据
- * @param tombstones - 墓碑数据（可选）
- */
-async function saveBackupToLocalStorage(bookmarks: BookmarkInfo[], tombstones: Tombstone[] = []): Promise<void> {
-    try {
-        const existingCache = await getLocalCache();
-        const localCache = existingCache || createEmptyLocalCache();
-
-        const newBackupRecord = createBackupRecord(bookmarks);
-
-        const updatedCache: SyncData = {
-            version: '2.0',
-            lastSyncTimestamp: Date.now(),
-            sourceBrowser: localCache.sourceBrowser,
-            backupRecords: [newBackupRecord, ...localCache.backupRecords].slice(0, BACKUP_DEFAULTS.MAX_BACKUPS),
-            tombstones: tombstones.length > 0 ? tombstones : localCache.tombstones
-        };
-
-        await saveLocalCache(updatedCache);
-
-        logger.info('saveBackupToLocalStorage: 备份保存成功', {
-            bookmarkCount: newBackupRecord.bookmarkCount,
-            totalBackups: updatedCache.backupRecords.length,
-            tombstoneCount: updatedCache.tombstones?.length || 0
-        });
-    } catch (error) {
-        logger.error('saveBackupToLocalStorage: 备份保存失败', error);
-    }
-}
-
-/**
  * 保存同步状态到浏览器本地存储
  * 
  * @param result - 同步结果
@@ -668,28 +708,5 @@ async function saveSyncStatus(result: SyncResult): Promise<void> {
         [STORAGE_KEYS.LAST_SYNC_ERROR]: result.errorMessage || '',
         [STORAGE_KEYS.LOCAL_COUNT]: result.localCount,
         [STORAGE_KEYS.REMOTE_COUNT]: result.remoteCount
-    });
-}
-
-/**
- * 发送冲突通知
- * 当检测到冲突时，发送系统通知
- * 
- * @param conflicts - 冲突列表
- */
-export async function notifyConflict(conflicts: ConflictInfo[]): Promise<void> {
-    // 没有冲突则跳过
-    if (conflicts.length === 0) return;
-    
-    // 获取设置，检查是否启用通知
-    const setting = await Setting.build();
-    if (!setting.enableNotify) return;
-    
-    // 发送系统通知
-    await browser.notifications.create({
-        type: 'basic',
-        iconUrl: '../assets/icon.png',
-        title: 'Sync Conflict',
-        message: `${conflicts.length} conflicts detected`
     });
 }

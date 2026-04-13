@@ -48,6 +48,12 @@ const mockI18n = {
   getMessage: vi.fn((key: string) => key),
 }
 
+const mockAlarms = {
+  create: vi.fn().mockResolvedValue(undefined),
+  clear: vi.fn().mockResolvedValue(true),
+  onAlarm: { addListener: vi.fn(), removeListener: vi.fn() },
+}
+
 // @ts-expect-error - Mocking global browser object
 globalThis.browser = {
   storage: mockStorage,
@@ -56,6 +62,7 @@ globalThis.browser = {
   notifications: mockNotifications,
   action: mockAction,
   i18n: mockI18n,
+  alarms: mockAlarms,
 }
 
 // Mock process.env for logger

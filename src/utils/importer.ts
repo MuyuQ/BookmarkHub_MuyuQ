@@ -9,6 +9,7 @@
 import { BookmarkInfo } from './models';
 import { logger } from './logger';
 import { BookmarkHubError, createError } from './errors';
+import { getBookmarkCount } from './bookmarkUtils';
 
 /**
  * 导入格式类型
@@ -107,22 +108,6 @@ function validateBookmarkStructure(bookmark: unknown, path: string = 'root'): Bo
 }
 
 /**
- * 检查书签总数（递归）
- */
-function countBookmarks(bookmarks: BookmarkInfo[]): number {
-  let count = 0;
-  
-  for (const bookmark of bookmarks) {
-    count++;
-    if (bookmark.children && bookmark.children.length > 0) {
-      count += countBookmarks(bookmark.children);
-    }
-  }
-  
-  return count;
-}
-
-/**
  * 清理标题字符串，移除HTML标签等恶意内容
  */
 function sanitizeTitle(title: string): string {
@@ -179,7 +164,7 @@ function validateAndSanitizeBookmarks(data: unknown): BookmarkInfo[] {
   
   // 计算总书签数
   const tempCount = data.reduce((total, bookmark) => {
-    const childrenCount = bookmark.children ? countBookmarks(bookmark.children) : 0;
+    const childrenCount = bookmark.children ? getBookmarkCount(bookmark.children) : 0;
     return total + 1 + childrenCount;
   }, 0);
   
@@ -194,7 +179,7 @@ function validateAndSanitizeBookmarks(data: unknown): BookmarkInfo[] {
     validatedBookmarks.push(validateBookmarkStructure(data[i], `root[${i}]`));
   }
   
-  const finalCount = countBookmarks(validatedBookmarks);
+  const finalCount = getBookmarkCount(validatedBookmarks);
   if (finalCount > MAX_IMPORT_SIZE) {
     throw createError.importError(`Post-sanitized import size (${finalCount}) exceeds maximum allowed (${MAX_IMPORT_SIZE})`);
   }

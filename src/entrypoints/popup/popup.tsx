@@ -19,14 +19,17 @@ const Popup: React.FC = () => {
     
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
-            let elem = e.target as HTMLInputElement;
-            if (elem != null && elem.className === 'dropdown-item') {
+            const elem = e.target as HTMLElement;
+            // 只禁用有 name 属性的 dropdown-item（同步操作），不影响 Export/Import/Settings
+            if (elem != null && elem.classList.contains('dropdown-item') && elem.getAttribute('name')) {
                 elem.setAttribute('disabled', 'disabled');
-                browser.runtime.sendMessage({ name: elem.name })
+                browser.runtime.sendMessage({ name: elem.getAttribute('name') })
                     .then(() => {
                         elem.removeAttribute('disabled');
                     })
-                    .catch(() => {});
+                    .catch(() => {
+                        elem.removeAttribute('disabled');
+                    });
             }
         };
         document.addEventListener('click', handleClick);

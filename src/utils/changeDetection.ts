@@ -36,7 +36,9 @@ function hasChanged(a: BookmarkInfo, b: BookmarkInfo): boolean {
   return a.title !== b.title ||
          a.url !== b.url ||
          a.parentId !== b.parentId ||
-         a.index !== b.index;
+         a.index !== b.index ||
+         a.dateGroupModified !== b.dateGroupModified ||
+         a.type !== b.type;
 }
 
 function isMoved(a: BookmarkInfo, b: BookmarkInfo): boolean {

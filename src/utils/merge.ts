@@ -146,7 +146,10 @@ function resolveConflicts(
 ): ResolvedConflict[] {
   return conflicts.map(c => {
     if (mode === 'auto') {
-      const useLocal = c.local.timestamp > c.remote.timestamp;
+      // 使用书签的实际修改时间进行比较，而非变更检测时的 timestamp
+      const localTime = c.local.bookmark.dateGroupModified ?? c.local.bookmark.dateAdded ?? 0;
+      const remoteTime = c.remote.bookmark.dateGroupModified ?? c.remote.bookmark.dateAdded ?? 0;
+      const useLocal = localTime >= remoteTime;
       return {
         ...c,
         winner: useLocal ? 'local' : 'remote',
@@ -293,10 +296,26 @@ export function threeWayMerge(params: ThreeWayMergeParams): ThreeWayMergeResult 
 
   // 1. 如果没有基准点（首次同步），使用本地数据
   if (!baseline || baseline.length === 0) {
+    // 合并本地和远程墓碑
+    const allTombstones = mergeTombstones(localTombstones, remoteTombstones);
+    const cleanedTombstones = cleanExpiredTombstones(allTombstones);
+
+    // 如果远程有数据，应使用远程数据（避免覆盖）
+    if (remote && remote.length > 0) {
+      logger.info('三向合并: 无基准点但远程有数据，使用远程数据');
+      return {
+        merged: remote,
+        tombstones: cleanedTombstones,
+        hasChanges: true,
+        conflicts: [],
+        changeSummary: '首次同步，使用远程数据'
+      };
+    }
+
     logger.info('三向合并: 无基准点，使用本地数据');
     return {
       merged: local,
-      tombstones: cleanExpiredTombstones(localTombstones),
+      tombstones: cleanedTombstones,
       hasChanges: true,
       conflicts: [],
       changeSummary: '首次同步，使用本地数据'
@@ -613,21 +632,4 @@ function deduplicateTombstones(tombstones: Tombstone[]): Tombstone[] {
   }
 
   return Array.from(tombstoneMap.values());
-}
-
-/**
- * 统计书签数量（递归）
- *
- * @param bookmarks 书签树
- * @returns 书签总数
- */
-function countBookmarks(bookmarks: BookmarkInfo[]): number {
-  let count = 0;
-  for (const b of bookmarks) {
-    count++;
-    if (b.children) {
-      count += countBookmarks(b.children);
-    }
-  }
-  return count;
 }

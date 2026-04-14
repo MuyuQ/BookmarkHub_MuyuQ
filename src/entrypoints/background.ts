@@ -1,9 +1,9 @@
 import BookmarkService from '../utils/services'
 import { Setting } from '../utils/setting'
-import { startAutoSync, stopAutoSync, performSync, getIsSyncing } from '../utils/sync'
+import { startAutoSync, stopAutoSync, performSync, getIsSyncing, getIsSuppressingEvents, registerBookmarkEventCallback } from '../utils/sync'
 import optionsStorage from '../utils/optionsStorage'
 import iconLogo from '../assets/icon.png'
-import { OperType, BookmarkInfo, SyncDataInfo, RootBookmarksType, BrowserType } from '../utils/models'
+import { OperType, BookmarkInfo, SyncDataInfo, RootBookmarksType, BrowserType, SyncData } from '../utils/models'
 import { Bookmarks } from 'wxt/browser'
 import { getBookmarkCount, formatBookmarks, normalizeBookmarkIds } from '../utils/bookmarkUtils'
 import { createError, handleError } from '../utils/errors'
@@ -217,36 +217,6 @@ export default defineBackground(() => {
     }
     return false;
   });
-  browser.bookmarks.onCreated.addListener((id, info) => {
-    if (curOperType === OperType.NONE) {
-      browser.action.setBadgeText({ text: "!" });
-      browser.action.setBadgeBackgroundColor({ color: "#F00" });
-      refreshLocalCount();
-    }
-  });
-  browser.bookmarks.onChanged.addListener((id, info) => {
-    if (curOperType === OperType.NONE) {
-      browser.action.setBadgeText({ text: "!" });
-      browser.action.setBadgeBackgroundColor({ color: "#F00" });
-    }
-  })
-  browser.bookmarks.onMoved.addListener((id, info) => {
-    if (curOperType === OperType.NONE) {
-      browser.action.setBadgeText({ text: "!" });
-      browser.action.setBadgeBackgroundColor({ color: "#F00" });
-    }
-  })
-  browser.bookmarks.onRemoved.addListener((id, info) => {
-    if (curOperType === OperType.NONE) {
-      // 创建墓碑记录，防止删除的书签被"复活"
-      createTombstoneForBookmark(id, info).catch(err => {
-        logger.error('onRemoved: Failed to create tombstone', { id, error: err });
-      });
-      browser.action.setBadgeText({ text: "!" });
-      browser.action.setBadgeBackgroundColor({ color: "#F00" });
-      refreshLocalCount();
-    }
-  })
 
   /**
    * 为被删除的书签创建墓碑记录
@@ -260,47 +230,67 @@ export default defineBackground(() => {
     removeInfo: Bookmarks.OnRemovedRemoveInfoType
   ): Promise<void> {
     try {
-      // 获取或初始化本地缓存
       let cache = await getLocalCache();
       if (!cache) {
         cache = createEmptyLocalCache();
       }
-
-      // 确保墓碑数组存在
       if (!cache.tombstones) {
         cache.tombstones = [];
       }
-
-      // 获取设备标识
       const browserInfo = getBrowserInfo();
       const deviceIdentifier = `${browserInfo.browser}/${browserInfo.os}`;
-
-      // 创建墓碑记录
       const tombstone: Tombstone = {
         id: bookmarkId,
         deletedAt: Date.now(),
         deletedBy: deviceIdentifier
       };
-
-      // 检查是否已存在相同 ID 的墓碑（避免重复）
       const existingIndex = cache.tombstones.findIndex(t => t.id === bookmarkId);
       if (existingIndex >= 0) {
-        // 更新已存在的墓碑
         cache.tombstones[existingIndex] = tombstone;
         logger.debug('createTombstoneForBookmark: Updated existing tombstone', { bookmarkId });
       } else {
-        // 添加新墓碑
         cache.tombstones.push(tombstone);
         logger.debug('createTombstoneForBookmark: Created tombstone', { bookmarkId, deviceIdentifier });
       }
-
-      // 保存更新后的缓存
       await saveLocalCache(cache);
       logger.info('createTombstoneForBookmark: Tombstone saved', { bookmarkId, deviceIdentifier });
     } catch (error) {
       logger.error('createTombstoneForBookmark: Failed to save tombstone', { bookmarkId, error });
     }
   }
+
+  /**
+   * 更新徽章显示书签变更状态
+   */
+  function updateBookmarkBadge(): void {
+    browser.action.setBadgeText({ text: "!" });
+    browser.action.setBadgeBackgroundColor({ color: "#F00" });
+  }
+
+  /**
+   * 注册书签事件回调（统一由 sync.ts 管理监听器）
+   * 使用 getIsSuppressingEvents() 检查同步状态，避免递归同步
+   */
+  registerBookmarkEventCallback('onCreated', () => {
+    updateBookmarkBadge();
+    refreshLocalCount();
+  });
+
+  registerBookmarkEventCallback('onChanged', () => {
+    updateBookmarkBadge();
+  });
+
+  registerBookmarkEventCallback('onMoved', () => {
+    updateBookmarkBadge();
+  });
+
+  registerBookmarkEventCallback('onRemoved', (id, info) => {
+    createTombstoneForBookmark(id, info as Bookmarks.OnRemovedRemoveInfoType).catch(err => {
+      logger.error('onRemoved: Failed to create tombstone', { id, error: err });
+    });
+    updateBookmarkBadge();
+    refreshLocalCount();
+  });
 
   async function uploadBookmarks() {
     try {
@@ -328,7 +318,7 @@ export default defineBackground(() => {
         description: setting.gistFileName
       });
       
-      const count = getBookmarkCount(syncdata.bookmarks);
+      const count = getBookmarkCount(syncdata.backupRecords[0].bookmarkData);
       await browser.storage.local.set({ [STORAGE_KEYS.REMOTE_COUNT]: count, [STORAGE_KEYS.LOCAL_COUNT]: count });
       
       notifyRefreshCounts();
@@ -344,13 +334,18 @@ export default defineBackground(() => {
     }
   }
   
-  function createSyncData(bookmarks: BookmarkInfo[]): SyncDataInfo {
-    const syncdata = new SyncDataInfo();
-    syncdata.version = browser.runtime.getManifest().version;
-    syncdata.createDate = Date.now();
-    syncdata.bookmarks = formatBookmarks(bookmarks);
-    syncdata.browser = navigator.userAgent;
-    return syncdata;
+  function createSyncData(bookmarks: BookmarkInfo[]): SyncData {
+    return {
+      version: '2.0',
+      lastSyncTimestamp: Date.now(),
+      sourceBrowser: getBrowserInfo(),
+      backupRecords: [{
+        backupTimestamp: Date.now(),
+        bookmarkData: formatBookmarks(bookmarks) || [],
+        bookmarkCount: getBookmarkCount(bookmarks)
+      }],
+      tombstones: []
+    };
   }
   
   async function notifyRefreshCounts(): Promise<void> {
@@ -431,13 +426,13 @@ export default defineBackground(() => {
   function normalizeFolderNames(bookmarks: BookmarkInfo[] | undefined) {
     if (!bookmarks) return;
     for (const node of bookmarks) {
-      if (ROOT_FOLDER_NAMES.TOOLBAR.includes(node.title as any)) {
+      if (node.title && ROOT_FOLDER_NAMES.TOOLBAR.includes(node.title)) {
         node.title = RootBookmarksType.ToolbarFolder;
-      } else if (ROOT_FOLDER_NAMES.MENU.includes(node.title as any)) {
+      } else if (node.title && ROOT_FOLDER_NAMES.MENU.includes(node.title)) {
         node.title = RootBookmarksType.MenuFolder;
-      } else if (ROOT_FOLDER_NAMES.UNFILED.includes(node.title as any)) {
+      } else if (node.title && ROOT_FOLDER_NAMES.UNFILED.includes(node.title)) {
         node.title = RootBookmarksType.UnfiledFolder;
-      } else if (ROOT_FOLDER_NAMES.MOBILE.includes(node.title as any)) {
+      } else if (node.title && ROOT_FOLDER_NAMES.MOBILE.includes(node.title)) {
         node.title = RootBookmarksType.MobileFolder;
       }
       if (node.children) {
@@ -473,17 +468,17 @@ async function clearBookmarkTree() {
       let bookmarks = await getBookmarks();
 
       function isRootFolderId(id: string): boolean {
-        return ROOT_NODE_IDS.ROOT.includes(id as any) ||
-               ROOT_NODE_IDS.TOOLBAR.includes(id as any) ||
-               ROOT_NODE_IDS.UNFILED.includes(id as any) ||
-               ROOT_NODE_IDS.MOBILE.includes(id as any) ||
-               ROOT_NODE_IDS.MENU.includes(id as any);
+        return ROOT_NODE_IDS.ROOT.includes(id) ||
+               ROOT_NODE_IDS.TOOLBAR.includes(id) ||
+               ROOT_NODE_IDS.UNFILED.includes(id) ||
+               ROOT_NODE_IDS.MOBILE.includes(id) ||
+               ROOT_NODE_IDS.MENU.includes(id);
       }
 
       function collectAllNodes(nodes: BookmarkInfo[]): BookmarkInfo[] {
         let result: BookmarkInfo[] = [];
         for (const node of nodes) {
-          if (node.id && !ROOT_NODE_IDS.ROOT.includes(node.id as any) && !isRootFolderId(node.id)) {
+          if (node.id && !ROOT_NODE_IDS.ROOT.includes(node.id) && !isRootFolderId(node.id)) {
             result.push(node);
           }
           if (node.children) {

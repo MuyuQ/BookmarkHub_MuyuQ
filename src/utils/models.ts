@@ -87,6 +87,9 @@ export class BookmarkInfo {
  * 同步数据结构
  * 用于存储完整的书签同步数据，包含元信息
  * 序列化后存储到 GitHub Gist 或 WebDAV 服务器
+ * 
+ * @deprecated Use SyncData interface instead (v2.0 format)
+ * This format will be removed in a future version.
  */
 export class SyncDataInfo {
     /** 浏览器类型标识 (存储浏览器User-Agent) */

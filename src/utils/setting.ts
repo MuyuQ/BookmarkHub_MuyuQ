@@ -80,8 +80,8 @@ export class Setting extends SettingBase {
     private static cachedSetting: Setting | null = null;
     /** 缓存时间戳 */
     private static cacheTimestamp = 0;
-    /** 缓存有效期 (5秒) */
-    private static readonly CACHE_TTL = 5000;
+    /** 缓存有效期 (15秒) */
+    private static readonly CACHE_TTL = 15 * 1000;
 
     /**
      * 私有构造函数

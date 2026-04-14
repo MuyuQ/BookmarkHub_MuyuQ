@@ -120,8 +120,9 @@ export class WebDAVClient {
      */
     private createAuthHeader(username: string, password: string): string {
         const credentials = `${username}:${password}`;
-        // 使用 UTF-8 编码，解决 btoa() 只支持 Latin1 字符的问题
-        const utf8Credentials = unescape(encodeURIComponent(credentials));
+        const encoder = new TextEncoder();
+        const encoded = encoder.encode(credentials);
+        const utf8Credentials = Array.from(encoded, byte => String.fromCharCode(byte)).join('');
         return `Basic ${btoa(utf8Credentials)}`;
     }
 

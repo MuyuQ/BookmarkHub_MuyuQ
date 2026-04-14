@@ -13,7 +13,7 @@ import { WEBDAV_DEFAULTS } from './constants';
 import { logger } from './logger';
 
 /** 敏感字段列表 - 这些字段在存储前会被加密 */
-const SENSITIVE_FIELDS = ['githubToken', 'webdavPassword'] as const;
+const SENSITIVE_FIELDS = ['githubToken', 'webdavPassword', 'masterPassword'] as const;
 
 /**
  * 创建 OptionsSync 实例

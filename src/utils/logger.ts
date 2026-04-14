@@ -89,6 +89,10 @@ function formatMessage(level: LogLevel, message: string): string {
   return `${config.prefix} [${timestamp}] [${level.toUpperCase()}] ${message}`;
 }
 
+export function setLogLevel(level: 'debug' | 'info' | 'warn' | 'error'): void {
+  config.level = level;
+}
+
 export const logger = {
   debug: (message: string, data?: unknown): void => {
     if (config.enableDebug || shouldLog('debug')) {

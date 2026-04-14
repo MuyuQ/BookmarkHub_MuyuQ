@@ -339,6 +339,11 @@ export const createError = {
   ),
 };
 
+const SYNC_ERROR_CODES = [
+  ErrorCode.SYNC_FAILED,
+  ErrorCode.SYNC_IN_PROGRESS,
+] as const;
+
 /**
  * 错误分类判断
  */
@@ -350,10 +355,10 @@ export const isError = {
     [ErrorCode.NETWORK_ERROR, ErrorCode.REQUEST_TIMEOUT, ErrorCode.RATE_LIMIT, ErrorCode.RATE_LIMIT_EXCEEDED].includes(error.code),
   
   syncError: (error: BookmarkHubError): boolean => 
-    error.code.startsWith('SYNC_'),
+    SYNC_ERROR_CODES.includes(error.code as typeof SYNC_ERROR_CODES[number]),
   
   webdavError: (error: BookmarkHubError): boolean => 
-    error.code.startsWith('WEBDAV_'),
+    [ErrorCode.WEBDAV_AUTH_FAILED, ErrorCode.WEBDAV_READ_ERROR, ErrorCode.WEBDAV_WRITE_ERROR, ErrorCode.WEBDAV_FILE_NOT_FOUND, ErrorCode.WEBDAV_CONNECTION_FAILED].includes(error.code),
   
   fileNotFoundError: (error: BookmarkHubError): boolean =>
     [ErrorCode.FILE_NOT_FOUND, ErrorCode.WEBDAV_FILE_NOT_FOUND].includes(error.code),

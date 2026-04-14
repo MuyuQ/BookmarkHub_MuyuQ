@@ -10,11 +10,11 @@
  */
 
 import { Setting } from './setting';
-import { BookmarkInfo, SyncDataInfo, SyncResult, ConflictInfo, SyncData, BackupRecord, Tombstone } from './models';
+import { SyncResult, ConflictInfo, SyncData, BackupRecord, Tombstone } from './models';
 import BookmarkService from './services';
 import { getBookmarks } from './services';
 import { formatBookmarks, getBookmarkCount, normalizeBookmarkIds } from './bookmarkUtils';
-import { webdavRead, webdavWrite } from './webdav';
+import { webdavWrite } from './webdav';
 import { handleError, createError } from './errors';
 import { logger, logSync } from './logger';
 import { threeWayMerge, ThreeWayMergeResult, ConflictMode as MergeConflictMode } from './merge';
@@ -22,6 +22,10 @@ import { STORAGE_KEYS, BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS, MV3_CONFIG } from '
 import { Bookmarks } from 'wxt/browser';
 import { getLocalCache, saveLocalCache } from './localCache';
 import { syncDebouncer } from './debounce';
+import { fetchRemoteData as _fetchRemoteData, extractBookmarksFromData as _extractBookmarksFromData, isSyncDataInfo as _isSyncDataInfo, isSyncData as _isSyncData } from './sync/dataFetcher';
+
+// Re-export for backward compatibility
+export { fetchRemoteData, extractBookmarksFromData, isSyncDataInfo, isSyncData } from './sync/dataFetcher';
 
 /**
  * 同步模式类型定义
@@ -69,6 +73,65 @@ export function getIsSuppressingEvents(): boolean {
 }
 
 /**
+ * 书签事件回调类型
+ */
+export type BookmarkEventType = 'onCreated' | 'onChanged' | 'onMoved' | 'onRemoved';
+
+/**
+ * 书签事件回调函数
+ */
+type BookmarkEventCallback = (id: string, info: unknown) => void | Promise<void>;
+
+/**
+ * 已注册的书签事件回调
+ */
+const bookmarkEventCallbacks: Map<BookmarkEventType, BookmarkEventCallback[]> = new Map();
+
+/**
+ * 注册书签事件回调
+ * 当书签事件触发时，回调会被执行（仅在非抑制状态下）
+ *
+ * @param eventType - 事件类型
+ * @param callback - 回调函数
+ * @returns 取消注册的函数
+ */
+export function registerBookmarkEventCallback(
+    eventType: BookmarkEventType,
+    callback: BookmarkEventCallback
+): () => void {
+    if (!bookmarkEventCallbacks.has(eventType)) {
+        bookmarkEventCallbacks.set(eventType, []);
+    }
+    bookmarkEventCallbacks.get(eventType)!.push(callback);
+    return () => {
+        const callbacks = bookmarkEventCallbacks.get(eventType);
+        if (callbacks) {
+            const index = callbacks.indexOf(callback);
+            if (index >= 0) callbacks.splice(index, 1);
+        }
+    };
+}
+
+/**
+ * 执行已注册的回调
+ */
+function executeCallbacks(eventType: BookmarkEventType, id: string, info: unknown): void {
+    const callbacks = bookmarkEventCallbacks.get(eventType);
+    if (callbacks) {
+        for (const cb of callbacks) {
+            try {
+                const result = cb(id, info);
+                if (result instanceof Promise) {
+                    result.catch(err => logger.error(`bookmarkEventCallback ${eventType} failed`, err));
+                }
+            } catch (err) {
+                logger.error(`bookmarkEventCallback ${eventType} error`, err);
+            }
+        }
+    }
+}
+
+/**
  * 事件监听器引用
  * 用于移除监听器，防止内存泄漏
  * 在同步操作期间检查事件抑制标志，防止递归同步
@@ -90,6 +153,7 @@ const syncListeners = {
     if (!isSuppressingEvents) {
       logger.info('onCreated: 调用 syncDebouncer.triggerSync()');
       syncDebouncer.triggerSync().catch(err => logger.error('onCreated sync failed', err));
+      executeCallbacks('onCreated', id, bookmark);
     } else {
       logger.info('onCreated: 跳过，事件正在被抑制');
     }
@@ -100,6 +164,7 @@ const syncListeners = {
     if (!isSuppressingEvents) {
       logger.info('onChanged: 调用 syncDebouncer.triggerSync()');
       syncDebouncer.triggerSync().catch(err => logger.error('onChanged sync failed', err));
+      executeCallbacks('onChanged', id, changeInfo);
     } else {
       logger.info('onChanged: 跳过，事件正在被抑制');
     }
@@ -110,6 +175,7 @@ const syncListeners = {
     if (!isSuppressingEvents) {
       logger.info('onMoved: 调用 syncDebouncer.triggerSync()');
       syncDebouncer.triggerSync().catch(err => logger.error('onMoved sync failed', err));
+      executeCallbacks('onMoved', id, moveInfo);
     } else {
       logger.info('onMoved: 跳过，事件正在被抑制');
     }
@@ -120,6 +186,7 @@ const syncListeners = {
     if (!isSuppressingEvents) {
       logger.info('onRemoved: 调用 syncDebouncer.triggerSync()');
       syncDebouncer.triggerSync().catch(err => logger.error('onRemoved sync failed', err));
+      executeCallbacks('onRemoved', id, removeInfo);
     } else {
       logger.info('onRemoved: 跳过，事件正在被抑制');
     }
@@ -379,10 +446,10 @@ export async function performSync(): Promise<SyncResult> {
         
         // 3. 获取远程数据
         logger.info('performSync: 步骤3 - 获取远程数据...');
-        const remoteData = await fetchRemoteData(setting);
+        const remoteData = await _fetchRemoteData(setting);
         let remoteBookmarks: BookmarkInfo[] = [];
         if (remoteData) {
-            remoteBookmarks = extractBookmarksFromData(remoteData) || [];
+            remoteBookmarks = _extractBookmarksFromData(remoteData) || [];
         }
         const remoteCount = getBookmarkCount(remoteBookmarks);
         logger.info(`performSync: 远程数据获取成功，共 ${remoteCount} 个书签`, { hasRemoteData: !!remoteData });
@@ -408,7 +475,7 @@ export async function performSync(): Promise<SyncResult> {
         });
 
         // 6. 提取远程墓碑（如果是 v2.0 格式）
-        const remoteTombstones = (remoteData && isSyncData(remoteData))
+        const remoteTombstones = (remoteData && _isSyncData(remoteData))
             ? (remoteData as SyncData).tombstones || []
             : [];
         logger.info('performSync: 远程墓碑提取完成', { remoteTombstones: remoteTombstones.length });
@@ -503,91 +570,6 @@ export async function performSync(): Promise<SyncResult> {
 }
 
 /**
- * Type guard to check if data is in the v1.0 format (SyncDataInfo)
- * @param obj - The data object to check
- */
-function isSyncDataInfo(obj: unknown): obj is SyncDataInfo {
-    if (obj == null || typeof obj !== 'object') return false;
-    if ('version' in obj && (obj as Record<string, unknown>).version === '2.0') return false;
-    return 'bookmarks' in obj && Array.isArray((obj as Record<string, unknown>).bookmarks);
-}
-
-/**
- * Type guard to check if data is in the v2.0 format (SyncData)
- * @param obj - The data object to check
- */
-function isSyncData(obj: unknown): obj is SyncData {
-    return obj != null &&
-           typeof obj === 'object' &&
-           'version' in obj && 
-           obj.version === '2.0';
-}
-
-/**
- * Helper to extract bookmark data regardless of version format
- * For v2.0, extracts from the most recent backup record
- * @param data - SyncData or SyncDataInfo object
- * @returns BookmarkInfo[] or undefined if not available
- */
-function extractBookmarksFromData(data: SyncData | SyncDataInfo | null): BookmarkInfo[] | undefined {
-    if (!data) return undefined;
-
-    if (isSyncData(data)) {
-        // It's v2.0 format - get bookmarks from the most recent backup record
-        if (data.backupRecords && data.backupRecords.length > 0) {
-            return data.backupRecords[0].bookmarkData;
-        }
-        return undefined;
-    } else if (isSyncDataInfo(data)) {
-        // It's v1.0 format - get bookmarks directly
-        return data.bookmarks;
-    }
-
-    return undefined;
-}
-
-/**
- * 获取远程同步数据
- * 根据存储类型从 GitHub Gist 或 WebDAV 获取数据
- * 支持检测 v1.0 和 v2.0 数据格式
- * 
- * @param setting - 用户设置
- * @returns Promise<SyncData | SyncDataInfo | null> 远程同步数据
- */
-async function fetchRemoteData(setting: Setting): Promise<SyncData | SyncDataInfo | null> {
-    let content: string | null = null;
-    
-    // WebDAV 存储
-    if (setting.storageType === 'webdav') {
-        content = await webdavRead();
-    } else {
-        // GitHub Gist 存储
-        content = await BookmarkService.get();
-    }
-    
-    if (!content) return null;
-    
-    try {
-        const data = JSON.parse(content);
-        
-        // 版本检测
-        if (data.version === '2.0') {
-            logger.info('fetchRemoteData: 检测到格式 v2.0');
-            return data as SyncData;
-        } else if (data.bookmarks && !data.backupRecords) {
-            logger.info('fetchRemoteData: 检测到格式 v1.0（旧格式）');
-            return data as SyncDataInfo;
-        }
-        
-        logger.warn('fetchRemoteData: 未知数据格式', { keys: Object.keys(data) });
-        return null;
-    } catch (error) {
-        logger.error('fetchRemoteData: 解析远程数据失败', error);
-        return null;
-    }
-}
-
-/**
  * 上传书签数据
  * 根据存储类型上传到 GitHub Gist 或 WebDAV
  * 上传前会先保存现有远程数据到备份记录
@@ -600,7 +582,7 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
 
     // 步骤1: 获取现有远程数据
     logger.info('uploadBookmarks: 步骤1 - 获取现有远程数据...');
-    const existingData = await fetchRemoteData(setting);
+    const existingData = await _fetchRemoteData(setting);
 
     // 步骤2: 创建新的备份记录
     logger.info('uploadBookmarks: 步骤2 - 创建新的备份记录...');
@@ -625,7 +607,7 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
     
     // 步骤4: 追加现有数据（迁移旧格式）
     if (existingData) {
-        if (isSyncData(existingData)) {
+        if (_isSyncData(existingData)) {
             // 现有数据已经是 v2.0 格式
             const remote = existingData as SyncData;
             uploadData.backupRecords.push(...remote.backupRecords || []);

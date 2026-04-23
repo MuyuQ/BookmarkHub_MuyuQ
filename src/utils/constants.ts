@@ -26,21 +26,21 @@ export const WEBDAV_DEFAULTS = {
 } as const;
 
 // 根书签文件夹名称映射
-export const ROOT_FOLDER_NAMES = {
+export const ROOT_FOLDER_NAMES: Record<string, string[]> = {
   TOOLBAR: ['书签栏', 'Bookmarks Bar', '书签工具栏'],
   MENU: ['菜单文件夹', 'Menu', '书签菜单'],
   UNFILED: ['其他书签', 'Other Bookmarks', '未分类'],
   MOBILE: ['移动设备书签', 'Mobile Bookmarks'],
-} as const;
+};
 
 // 浏览器根节点 ID
-export const ROOT_NODE_IDS = {
+export const ROOT_NODE_IDS: Record<string, string[]> = {
   ROOT: ['0', 'root________'],
   TOOLBAR: ['1', 'toolbar_____'],
   MENU: ['menu________'],
   UNFILED: ['2', 'unfiled_____'],
   MOBILE: ['3', 'mobile______'],
-} as const;
+};
 export const BACKUP_STORAGE_KEYS = {
   /** 本地缓存存储 key */
   LOCAL_CACHE_KEY: 'bookmarkHubCache',

@@ -1,0 +1,75 @@
+<h2>BookmarkHub 重构方案 - 架构对比</h2>
+<p class="subtitle">查看当前架构与重构后架构的对比</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">当前架构 (重构前)</div>
+    <div class="mockup-body">
+      <div style="padding: 20px; font-family: monospace; font-size: 12px; line-height: 1.6;">
+        <div style="background: #ffebee; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <strong style="color: #c62828;">background.ts (610行)</strong><br>
+          • 消息处理<br>
+          • 书签 CRUD<br>
+          • 墓碑管理<br>
+          • 徽章更新<br>
+          <span style="color: #c62828;">⚠ 职责过多</span>
+        </div>
+        <div style="background: #ffebee; padding: 10px; border-radius: 4px;">
+          <strong style="color: #c62828;">sync.ts (775行)</strong><br>
+          • 同步编排<br>
+          • 数据获取<br>
+          • 备份管理<br>
+          • 上传逻辑<br>
+          <span style="color: #c62828;">⚠ 耦合严重</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mockup">
+    <div class="mockup-header">重构后架构</div>
+    <div class="mockup-body">
+      <div style="padding: 20px; font-family: monospace; font-size: 12px; line-height: 1.6;">
+        <div style="background: #e8f5e9; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <strong style="color: #2e7d32;">background/ 模块</strong><br>
+          • messageHandlers.ts (~150行)<br>
+          • bookmarkOperations.ts (~200行)<br>
+          • tombstoneManager.ts (~80行)<br>
+          • badgeManager.ts (~50行)<br>
+          <span style="color: #2e7d32;">✓ 职责清晰</span>
+        </div>
+        <div style="background: #e8f5e9; padding: 10px; border-radius: 4px;">
+          <strong style="color: #2e7d32;">sync/ 模块</strong><br>
+          • orchestrator.ts (~200行)<br>
+          • dataFetcher.ts (~150行)<br>
+          • backupManager.ts (~120行)<br>
+          • uploadManager.ts (~150行)<br>
+          <span style="color: #2e7d32;">✓ 松耦合</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 30px;">
+  <h3>重构收益</h3>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>优点</h4>
+      <ul>
+        <li>单一职责原则</li>
+        <li>更易维护和测试</li>
+        <li>降低耦合度</li>
+        <li>更好的代码复用</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>风险</h4>
+      <ul>
+        <li>需要全面回归测试</li>
+        <li>文件数量增加</li>
+        <li>导入路径变更</li>
+      </ul>
+    </div>
+  </div>
+</div>

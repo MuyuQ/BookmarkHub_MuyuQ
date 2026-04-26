@@ -50,9 +50,20 @@ export default defineBackground(() => {
 
   /**
    * P1-9: Validate message sender to prevent cross-extension attacks
+   * Uses sender.url whitelist instead of !sender.id check which was insecure
    */
   function isValidSender(sender: Parameters<Parameters<typeof browser.runtime.onMessage.addListener>[0]>[1]): boolean {
-    return !sender.id || sender.id === browser.runtime.id;
+    // Internal messages from extension pages have a sender.url starting with the extension origin
+    if (sender.url) {
+      const extensionOrigin = browser.runtime.getURL('/');
+      return sender.url.startsWith(extensionOrigin.slice(0, -1));
+    }
+    // Messages from content scripts in extension pages have sender.id === browser.runtime.id
+    if (sender.id === browser.runtime.id) {
+      return true;
+    }
+    // Reject all other senders
+    return false;
   }
 
   /**
@@ -77,7 +88,18 @@ export default defineBackground(() => {
    * 用于书签事件监听器判断是否需要响应
    */
   let curOperType = OperType.NONE;
-  let curBrowserType = BrowserType.CHROME;
+
+  /**
+   * 动态检测当前浏览器类型
+   * 通过检查书签树根节点 ID 来判断是 Firefox 还是 Chrome
+   */
+  async function detectBrowserType(): Promise<BrowserType> {
+    const bookmarkTree = await browser.bookmarks.getTree();
+    if (bookmarkTree && bookmarkTree[0] && bookmarkTree[0].id === ROOT_NODE_IDS.ROOT[1]) {
+      return BrowserType.FIREFOX;
+    }
+    return BrowserType.CHROME;
+  }
   
 /**
     * 在操作队列中添加操作，确保顺序执行
@@ -443,12 +465,6 @@ export default defineBackground(() => {
 
   async function getBookmarks() {
     let bookmarkTree: BookmarkInfo[] = await browser.bookmarks.getTree();
-    if (bookmarkTree && bookmarkTree[0].id === ROOT_NODE_IDS.ROOT[1]) {
-      curBrowserType = BrowserType.FIREFOX;
-    }
-    else {
-      curBrowserType = BrowserType.CHROME;
-    }
     return bookmarkTree;
   }
 
@@ -491,9 +507,12 @@ async function clearBookmarkTree() {
       const allNodes = collectAllNodes(bookmarks);
       logger.debug('clearBookmarkTree: Total nodes to delete', allNodes.length);
 
+      // 逆序删除：先删除子节点，再删除父节点，避免孤儿节点
+      const reversedNodes = allNodes.slice().reverse();
+
       let deletedCount = 0;
       let failedCount = 0;
-      for (const node of allNodes) {
+      for (const node of reversedNodes) {
         try {
           if (node.id) {
             await browser.bookmarks.removeTree(node.id);
@@ -532,7 +551,8 @@ async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, pare
       return;
     }
 
-    logger.debug('createBookmarkTree: Browser type', curBrowserType);
+    const browserType = await detectBrowserType();
+    logger.debug('createBookmarkTree: Browser type', browserType);
 
     for (let i = 0; i < bookmarkList.length; i++) {
       let node = bookmarkList[i];
@@ -544,7 +564,7 @@ async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, pare
         || node.title == RootBookmarksType.ToolbarFolder
         || node.title == RootBookmarksType.UnfiledFolder) {
         let targetParentId: string = ROOT_NODE_IDS.UNFILED[0];
-        if (curBrowserType == BrowserType.FIREFOX) {
+        if (browserType == BrowserType.FIREFOX) {
           switch (node.title) {
             case RootBookmarksType.MenuFolder:
               targetParentId = ROOT_NODE_IDS.MENU[0];
@@ -581,7 +601,7 @@ async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, pare
       // 确定 parentId
       let actualParentId = node.parentId || parentId;
       if (!actualParentId || actualParentId === ROOT_NODE_IDS.ROOT[0]) {
-        actualParentId = curBrowserType == BrowserType.FIREFOX ? ROOT_NODE_IDS.UNFILED[1] : ROOT_NODE_IDS.UNFILED[0];
+        actualParentId = browserType == BrowserType.FIREFOX ? ROOT_NODE_IDS.UNFILED[1] : ROOT_NODE_IDS.UNFILED[0];
       }
 
       // 创建书签/文件夹

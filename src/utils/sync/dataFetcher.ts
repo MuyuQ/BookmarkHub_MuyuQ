@@ -10,6 +10,10 @@ import BookmarkService from '../services';
 import { webdavRead } from '../webdav';
 import { logger } from '../logger';
 import { Setting } from '../setting';
+import { createError } from '../errors';
+
+/** 远程数据最大允许大小 (10 MB) */
+const MAX_REMOTE_DATA_SIZE = 10 * 1024 * 1024;
 
 /**
  * Type guard to check if data is in the v1.0 format (SyncDataInfo)
@@ -75,7 +79,19 @@ export async function fetchRemoteData(setting: Setting): Promise<SyncData | Sync
     }
     
     if (!content) return null;
-    
+
+    // 检查远程数据大小，防止内存溢出
+    const contentSize = new Blob([content]).size;
+    if (contentSize > MAX_REMOTE_DATA_SIZE) {
+      logger.error('fetchRemoteData: 远程数据过大', {
+        size: contentSize,
+        maxSize: MAX_REMOTE_DATA_SIZE
+      });
+      throw createError.parseError(
+        `Remote data too large (${(contentSize / 1024 / 1024).toFixed(1)} MB, max ${(MAX_REMOTE_DATA_SIZE / 1024 / 1024)} MB)`
+      );
+    }
+
     try {
         const data = JSON.parse(content);
         

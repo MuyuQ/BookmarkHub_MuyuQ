@@ -210,22 +210,57 @@ function validateOptions(options: Record<string, unknown>): void {
  * 敏感字段会自动加密
  * 
  * @param options - 要设置的设置对象
+ * @param oldMasterPassword - 旧主密码（变更主密码时提供，用于验证和重新加密）
  * @throws {ValidationError} 当验证失败时抛出验证错误
+ * @throws {Error} 当旧密码验证失败时抛出错误
  */
-export async function setEncrypted(options: Record<string, unknown>): Promise<void> {
+export async function setEncrypted(options: Record<string, unknown>, oldMasterPassword?: string): Promise<void> {
     // 在加密之前先验证
     validateOptions(options);
     
+    const newMasterPassword = options.masterPassword as string || '';
+    const oldPassword = oldMasterPassword || '';
+    
+    // 如果主密码变更，先使用旧密码解密验证，确保旧密码正确
+    // 然后使用旧密码解密敏感字段，以便用新密码重新加密
     const encryptedOptions = { ...options };
+    const existingOptions = await optionsStorage.getAll();
     
-    // 获取 masterPassword（如果设置了）
-    const masterPassword = options.masterPassword as string || '';
+    for (const field of SENSITIVE_FIELDS) {
+        const currentValue = existingOptions[field] as string;
+        // 如果该字段已加密存储，需要先解密
+        if (currentValue && isEncrypted(currentValue)) {
+            try {
+                // 优先使用旧主密码解密（如果有）
+                if (oldPassword) {
+                    encryptedOptions[field] = await decrypt(currentValue, oldPassword);
+                } else if (existingOptions.masterPassword && (existingOptions.masterPassword as string)) {
+                    // 回退到使用存储中的旧主密码
+                    encryptedOptions[field] = await decrypt(currentValue, existingOptions.masterPassword as string);
+                } else {
+                    // 没有主密码 - 使用扩展 ID 解密（兼容模式）
+                    encryptedOptions[field] = await decrypt(currentValue);
+                }
+            } catch (error: unknown) {
+                // 旧密码解密失败，数据无法迁移
+                if (oldPassword || (existingOptions.masterPassword && (existingOptions.masterPassword as string))) {
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    logger.error(`setEncrypted: 旧密码解密 ${field} 失败`, { error: errorMsg });
+                    throw new Error(
+                        `无法使用旧密码解密 ${field}。请确认旧主密码正确，或重新输入凭证。`
+                    );
+                }
+                // 如果没有旧密码且解密失败，保留空值
+                encryptedOptions[field] = '';
+            }
+        }
+    }
     
+    // 现在用新主密码重新加密敏感字段
     for (const field of SENSITIVE_FIELDS) {
         const value = encryptedOptions[field] as string;
         if (value && typeof value === 'string' && !isEncrypted(value)) {
-            // 使用 masterPassword 加密（如果设置了），否则使用扩展 ID
-            encryptedOptions[field] = await encrypt(value, masterPassword || undefined);
+            encryptedOptions[field] = await encrypt(value, newMasterPassword || undefined);
         }
     }
     

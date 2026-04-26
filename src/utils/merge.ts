@@ -204,19 +204,41 @@ function applyChanges(
   return result;
 }
 
+/**
+ * 在树中按 index 排序插入书签
+ * 保持书签的正确排序顺序
+ */
 function addBookmarkToTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {
     if (!bookmark.parentId) {
-        tree.push(bookmark);
-        return;
+      insertSorted(tree, bookmark);
+      return;
     }
-    
+
     const parent = findBookmarkById(tree, bookmark.parentId);
     if (parent) {
-        if (!parent.children) parent.children = [];
-        parent.children.push(bookmark);
+      if (!parent.children) parent.children = [];
+      insertSorted(parent.children, bookmark);
     } else {
-        tree.push(bookmark);
+      insertSorted(tree, bookmark);
     }
+}
+
+/**
+ * 按 index 排序插入到数组中
+ */
+function insertSorted(arr: BookmarkInfo[], item: BookmarkInfo): void {
+  if (item.index === undefined) {
+    arr.push(item);
+    return;
+  }
+  const insertAt = arr.findIndex(existing =>
+    (existing.index ?? Infinity) > item.index!
+  );
+  if (insertAt >= 0) {
+    arr.splice(insertAt, 0, item);
+  } else {
+    arr.push(item);
+  }
 }
 
 function updateBookmarkInTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {

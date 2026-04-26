@@ -383,6 +383,30 @@ export function stopAutoSync(): void {
 }
 
 /**
+ * 检查持久化同步锁 (MV3 Service Worker 休眠恢复)
+ * 返回 true 表示锁有效且正在同步中，应跳过本次操作
+ */
+async function checkPersistentSyncLock(): Promise<boolean> {
+    try {
+        const result = await browser.storage.local.get(BACKUP_STORAGE_KEYS.SYNC_STATE_KEY);
+        const state = result[BACKUP_STORAGE_KEYS.SYNC_STATE_KEY] as SyncState | undefined;
+        if (state && state.isSyncing) {
+            // 如果锁状态超过 5 分钟，认为是过期的 (Service Worker 休眠后)
+            if (Date.now() - state.timestamp > 5 * 60 * 1000) {
+                logger.info('checkPersistentSyncLock: 发现过期锁，已清除');
+                await clearSyncState();
+                return false;
+            }
+            logger.info('checkPersistentSyncLock: 发现活跃锁，跳过同步');
+            return true;
+        }
+    } catch (error) {
+        logger.error('checkPersistentSyncLock failed', error);
+    }
+    return false;
+}
+
+/**
  * 执行同步操作
  * 同步流程:
  * 1. 检查是否正在同步 (防止重复)
@@ -390,13 +414,30 @@ export function stopAutoSync(): void {
  * 3. 智能合并数据
  * 4. 上传合并后的数据
  * 5. 保存同步状态
- * 
+ *
  * @returns Promise<SyncResult> 同步结果
  */
 export async function performSync(): Promise<SyncResult> {
     logger.info('========== performSync 开始 ==========');
     logger.info(`performSync: isSyncing=${isSyncing}, isSuppressingEvents=${isSuppressingEvents}`);
-    
+
+    // 恢复持久化状态 (MV3 Service Worker 休眠恢复)
+    await restoreSyncState();
+
+    // 检查持久化同步锁
+    if (await checkPersistentSyncLock()) {
+        logSync.skipped('Sync lock held in persistent storage');
+        logger.info('performSync: 持久化锁已激活，跳过');
+        return {
+            direction: 'upload',
+            status: 'skipped',
+            timestamp: Date.now(),
+            localCount: 0,
+            remoteCount: 0,
+            errorMessage: 'Sync lock held'
+        };
+    }
+
     // 如果正在同步，跳过这次操作
     if (isSyncing) {
         logSync.skipped('Sync already in progress');

@@ -56,6 +56,9 @@ Popup/Options ──browser.runtime.sendMessage──> background.ts
 | 变更检测 | `src/utils/changeDetection.ts` |
 | 合并逻辑 | `src/utils/merge.ts` |
 | 日志 | `src/utils/logger.ts` |
+| 本地缓存 | `src/utils/localCache.ts` |
+| 导入导出 | `src/utils/importer.ts`, `src/utils/exporter.ts` |
+| 加解密 | `src/utils/crypto.ts` |
 
 ## Critical Patterns
 
@@ -125,3 +128,9 @@ tests/setup.ts  # Mock browser API (storage, bookmarks, runtime 等)
 - `/AGENTS.md` - 项目概览
 - `/src/utils/AGENTS.md` - 工具模块详情
 - `/src/entrypoints/AGENTS.md` - 入口点详情
+
+中文技术文档：
+- `docs/项目架构总览.md` - 系统架构、目录结构、数据模型
+- `docs/数据流与同步机制.md` - 同步模式、合并算法、墓碑机制
+- `docs/核心模块详解.md` - 12个核心模块的详细说明
+- `docs/开发者指南.md` - 开发环境、代码规范、调试技巧

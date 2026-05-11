@@ -1,4 +1,4 @@
-import { BookmarkInfo, SyncDataInfo, ConflictInfo, Tombstone } from './models';
+import { BookmarkInfo, ConflictInfo, Tombstone } from './models';
 import { BookmarkChange, detectChanges, ChangeDetectionResult } from './changeDetection';
 import { logger } from './logger';
 import { getBookmarkCount } from './bookmarkUtils';
@@ -6,14 +6,6 @@ import { getBookmarkCount } from './bookmarkUtils';
 export type ConflictMode = 'auto' | 'prompt';
 
 const MAX_RECURSION_DEPTH = 100;
-
-export interface MergeResult {
-  merged: BookmarkInfo[];
-  hasChanges: boolean;
-  conflicts: ConflictInfo[];
-  appliedChanges: BookmarkChange[];
-  changeSummary: string;
-}
 
 /**
  * 三向合并参数
@@ -61,65 +53,7 @@ interface ResolvedConflict {
   isConflict: boolean;
 }
 
-/**
- * @deprecated Use threeWayMerge instead. This function will be removed in a future version.
- */
-export function mergeBookmarks(
-  local: BookmarkInfo[],
-  remote: SyncDataInfo | null,
-  conflictMode: ConflictMode
-): MergeResult {
-  if (!remote?.bookmarks) {
-    return {
-      merged: local,
-      hasChanges: false,
-      conflicts: [],
-      appliedChanges: [],
-      changeSummary: '无变更',
-    };
-  }
-  
-  const localChanges = detectChanges(remote.bookmarks, local);
-  const remoteChanges = detectChanges(local, remote.bookmarks);
-  
-  if (!localChanges.hasChanges && !remoteChanges.hasChanges) {
-    return {
-      merged: local,
-      hasChanges: false,
-      conflicts: [],
-      appliedChanges: [],
-      changeSummary: '无变更',
-    };
-  }
-  
-  const conflicts = findConflicts(localChanges, remoteChanges);
-  const resolved = resolveConflicts(conflicts, conflictMode);
-  
-  const merged = applyChanges(remote.bookmarks, localChanges, resolved);
-  
-  const appliedChanges = localChanges.changes.filter(change => {
-    const resolution = resolved.find(r => 
-      r.local.bookmark.id === change.bookmark.id
-    );
-    return !resolution || resolution.winner === 'local' || !resolution.isConflict;
-  });
-  
-  const conflictInfos: ConflictInfo[] = resolved
-    .filter(r => r.isConflict)
-    .map(r => ({
-      type: 'modified' as const,
-      localBookmark: r.local.bookmark,
-      remoteBookmark: r.remote.bookmark,
-    }));
-  
-  return {
-    merged,
-    hasChanges: appliedChanges.length > 0,
-    conflicts: conflictInfos,
-    appliedChanges,
-    changeSummary: formatChangeSummary(localChanges, remoteChanges),
-  };
-}
+
 
 function findConflicts(
   local: ChangeDetectionResult,

@@ -68,4 +68,6 @@ export const BACKUP_DEFAULTS = {
 export const MV3_CONFIG = {
   /** 定时同步 Alarm 名称 */
   SYNC_ALARM_NAME: 'bookmarkhub-interval-sync',
+  /** 同步状态过期时间 (毫秒) - 用于 Service Worker 休眠恢复 */
+  SYNC_STATE_EXPIRY_MS: 5 * 60 * 1000, // 5 分钟
 } as const;

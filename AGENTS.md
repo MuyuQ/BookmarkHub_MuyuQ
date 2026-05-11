@@ -1,6 +1,6 @@
 # AGENTS.md - BookmarkHub Development Guide
 
-**Generated:** 2026-03-16 | **Commit:** 5708fca | **Branch:** main
+**Generated:** 2026-05-11 | **Commit:** d7b9cbf | **Branch:** main
 
 ## Overview
 Browser extension (Chrome/Firefox) for syncing bookmarks via GitHub Gist or WebDAV. Built with WXT + React 18 + TypeScript.
@@ -15,6 +15,9 @@ npm run dev:firefox      # Start dev server (Firefox)
 npm run build            # Build for production (Chrome)
 npm run build:firefox    # Build for production (Firefox)
 npm run compile          # TypeScript type check (tsc --noEmit)
+npm run test             # Run all unit tests
+npm run test:watch       # Test watch mode
+npm run test:coverage    # Test coverage report
 ```
 
 ## Structure
@@ -44,13 +47,16 @@ src/
 
 | Symbol | Type | Location | Role |
 |--------|------|----------|------|
-| `BookmarkInfo` | Class | models.ts:20 | Bookmark data model |
-| `SyncDataInfo` | Class | models.ts:60 | Sync payload wrapper |
-| `BookmarkHubError` | Class | errors.ts:47 | Typed error handling |
-| `Setting.build()` | Method | setting.ts:104 | Get current settings |
-| `BookmarkService` | Singleton | services.ts:52 | GitHub Gist API |
-| `performSync()` | Function | sync.ts:134 | Main sync orchestration |
-| `retryOperation()` | Function | retry.ts:59 | Network retry with backoff |
+| `BookmarkInfo` | Class | models.ts | Bookmark data model |
+| `SyncDataInfo` | Class | models.ts | Sync payload wrapper |
+| `BookmarkHubError` | Class | errors.ts | Typed error handling |
+| `Setting.build()` | Method | setting.ts | Get current settings |
+| `BookmarkService` | Singleton | services.ts | GitHub Gist API |
+| `WebDAVService` | Singleton | webdav.ts | WebDAV client |
+| `performSync()` | Function | sync.ts | Main sync orchestration |
+| `mergeBookmarks()` | Function | merge.ts | Three-way merge algorithm |
+| `detectChanges()` | Function | changeDetection.ts | Change detection |
+| `retryOperation()` | Function | retry.ts | Network retry with backoff |
 
 ## Conventions
 
@@ -85,11 +91,7 @@ enableAutoSync      // Booleans (prefix: is/has/enable)
 
 ## TODO (Unimplemented)
 
-| Location | Description |
-|----------|-------------|
-| `sync.ts:315` | Complex merge logic (detect add/delete/modify) |
-| `sync.ts:369` | Change detection implementation |
-| `sync.ts:380` | Change detection logic |
+当前无待实现功能。核心同步、合并、变更检测功能已完成实现。
 
 ## Architecture Patterns
 
@@ -113,6 +115,22 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 - `OperType` enum marks current operation state
 - `isSyncing` lock prevents concurrent syncs
 - Ignore bookmark events during sync operations
+
+## Documentation
+
+详细中文技术文档请参阅 `docs/` 目录：
+
+| 文档 | 文件 | 内容 |
+|------|------|------|
+| 项目架构总览 | `docs/项目架构总览.md` | 系统架构、目录结构、数据模型 |
+| 数据流与同步机制 | `docs/数据流与同步机制.md` | 同步模式、合并算法、墓碑机制 |
+| 核心模块详解 | `docs/核心模块详解.md` | 12个核心模块的详细说明 |
+| 开发者指南 | `docs/开发者指南.md` | 开发环境、代码规范、调试技巧 |
+
+其他参考文档：
+- `/CLAUDE.md` - Claude Code 开发指南
+- `/src/utils/AGENTS.md` - 工具模块详情
+- `/src/entrypoints/AGENTS.md` - 入口点详情
 
 ## Resources
 - [WXT Docs](https://wxt.dev/)

@@ -10,7 +10,8 @@
  */
 
 import { Setting } from './setting';
-import { SyncResult, ConflictInfo, SyncData, BackupRecord, Tombstone } from './models';
+// SyncDataInfo 用于向后兼容旧数据格式的迁移逻辑
+import { SyncResult, ConflictInfo, SyncData, BackupRecord, Tombstone, SyncDataInfo } from './models';
 import BookmarkService from './services';
 import { getBookmarks } from './services';
 import { formatBookmarks, getBookmarkCount, normalizeBookmarkIds } from './bookmarkUtils';
@@ -223,8 +224,8 @@ async function restoreSyncState(): Promise<void> {
         const result = await browser.storage.local.get(BACKUP_STORAGE_KEYS.SYNC_STATE_KEY);
         const state = result[BACKUP_STORAGE_KEYS.SYNC_STATE_KEY] as SyncState | undefined;
         if (state) {
-            // 如果状态超过 5 分钟，认为是过期的 (Service Worker 休眠后)
-            if (Date.now() - state.timestamp > 5 * 60 * 1000) {
+            // 如果状态超过设定时间，认为是过期的 (Service Worker 休眠后)
+            if (Date.now() - state.timestamp > MV3_CONFIG.SYNC_STATE_EXPIRY_MS) {
                 isSyncing = false;
                 isSuppressingEvents = false;
                 logger.info('restoreSyncState: Cleared stale sync state');
@@ -391,8 +392,8 @@ async function checkPersistentSyncLock(): Promise<boolean> {
         const result = await browser.storage.local.get(BACKUP_STORAGE_KEYS.SYNC_STATE_KEY);
         const state = result[BACKUP_STORAGE_KEYS.SYNC_STATE_KEY] as SyncState | undefined;
         if (state && state.isSyncing) {
-            // 如果锁状态超过 5 分钟，认为是过期的 (Service Worker 休眠后)
-            if (Date.now() - state.timestamp > 5 * 60 * 1000) {
+            // 如果锁状态超过设定时间，认为是过期的 (Service Worker 休眠后)
+            if (Date.now() - state.timestamp > MV3_CONFIG.SYNC_STATE_EXPIRY_MS) {
                 logger.info('checkPersistentSyncLock: 发现过期锁，已清除');
                 await clearSyncState();
                 return false;

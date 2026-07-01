@@ -48,7 +48,8 @@ src/
 | Symbol | Type | Location | Role |
 |--------|------|----------|------|
 | `BookmarkInfo` | Class | models.ts | Bookmark data model |
-| `SyncDataInfo` | Class | models.ts | Sync payload wrapper |
+| `SyncDataInfo` | Class | models.ts | Sync payload wrapper (deprecated in v2) |
+| `Tombstone` | Interface | models.ts | Deletion marker |
 | `BookmarkHubError` | Class | errors.ts | Typed error handling |
 | `Setting.build()` | Method | setting.ts | Get current settings |
 | `BookmarkService` | Singleton | services.ts | GitHub Gist API |
@@ -57,6 +58,11 @@ src/
 | `mergeBookmarks()` | Function | merge.ts | Three-way merge algorithm |
 | `detectChanges()` | Function | changeDetection.ts | Change detection |
 | `retryOperation()` | Function | retry.ts | Network retry with backoff |
+| `encryptCredential()` | Function | crypto.ts | Web Crypto API credential encryption |
+| `uploadManualBookmarks()` | Function | manualSyncTransfer.ts | Manual upload to selected backend |
+| `downloadManualBookmarks()` | Function | manualSyncTransfer.ts | Manual download from selected backend |
+| `getBackupRecords()` | Function | localCache.ts | List backup history |
+| `getBrowserInfo()` | Function | browserInfo.ts | Runtime browser/OS detection |
 
 ## Conventions
 
@@ -91,7 +97,12 @@ enableAutoSync      // Booleans (prefix: is/has/enable)
 
 ## TODO (Unimplemented)
 
-当前无待实现功能。核心同步、合并、变更检测功能已完成实现。
+| 功能 | 优先级 |
+|------|--------|
+| 移动端支持 | Low |
+| 端到端数据加密 | Medium |
+| 书签分享功能 | Low |
+| 自动化测试与 CI/CD 流水线 | Medium |
 
 ## Architecture Patterns
 

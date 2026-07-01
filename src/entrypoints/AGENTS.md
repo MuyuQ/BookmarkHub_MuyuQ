@@ -14,13 +14,15 @@
 
 | Message | Handler | Purpose |
 |---------|---------|---------|
-| `upload` | `uploadBookmarks()` | Upload local bookmarks to remote |
-| `download` | `downloadBookmarks()` | Download remote bookmarks to local |
+| `upload` | `uploadBookmarks()` → `manualSyncTransfer` | Upload local bookmarks to remote |
+| `download` | `downloadBookmarks()` → `manualSyncTransfer` | Download remote bookmarks to local |
 | `sync` | `performSync()` | Bi-directional sync with conflict resolution |
 | `removeAll` | `clearBookmarkTree()` | Clear all local bookmarks |
+| `setting` | `browser.runtime.openOptionsPage()` | Open settings page |
 | `getBackupRecords` | Returns backup history | List available backups |
 | `restoreFromBackup` | Restore from backup | Restore bookmarks from timestamp |
 | `deleteBackupRecord` | Delete backup record | Remove backup from history |
+| `refreshCounts` | notification only | Refresh popup bookmark counts |
 
 ## Message Flow
 

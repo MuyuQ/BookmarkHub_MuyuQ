@@ -217,3 +217,6 @@ MIT License - 详情见 `LICENSE` 文件
 <p align="center">
   Made with 💚 by BookmarkHub Team
 </p>
+
+---
+*最后更新: 2026-08-02*

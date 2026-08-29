@@ -457,6 +457,7 @@ export async function performSync(): Promise<SyncResult> {
     isSyncing = true;
     isSuppressingEvents = true;
     logger.info('performSync: 设置同步锁 isSyncing=true, isSuppressingEvents=true');
+    await saveSyncState();
     logSync.start();
     
     // 初始化结果对象
@@ -604,8 +605,7 @@ export async function performSync(): Promise<SyncResult> {
         isSyncing = false;
         isSuppressingEvents = false;
         logger.info(`performSync: 释放同步锁 isSyncing=false, isSuppressingEvents=false`);
-        // 持久化状态 (MV3 Service Worker 休眠恢复)
-        await saveSyncState();
+        await clearSyncState();
     }
     
     return result;
@@ -680,7 +680,10 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
     
     // 步骤6: 根据存储类型选择上传方式
     if (setting.storageType === 'webdav') {
-        await webdavWrite(content);
+        const writeSucceeded = await webdavWrite(content);
+        if (!writeSucceeded) {
+            throw createError.networkError('WebDAV upload failed');
+        }
         logger.info('uploadBookmarks: WebDAV 上传完成');
         return;
     }

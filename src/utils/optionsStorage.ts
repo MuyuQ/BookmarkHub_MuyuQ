@@ -12,8 +12,30 @@ import { ValidationError } from './errors';
 import { WEBDAV_DEFAULTS } from './constants';
 import { logger } from './logger';
 
-/** 敏感字段列表 - 这些字段在存储前会被加密 */
-const SENSITIVE_FIELDS = ['githubToken', 'webdavPassword', 'masterPassword'] as const;
+/** 敏感凭证字段列表 - 这些字段使用主密码（如果有）进行加密 */
+const CREDENTIAL_FIELDS = ['githubToken', 'webdavPassword'] as const;
+const MASTER_PASSWORD_FIELD = 'masterPassword' as const;
+
+async function decryptStoredMasterPassword(value: string | undefined): Promise<string> {
+    if (!value) {
+        return '';
+    }
+
+    if (!isEncrypted(value)) {
+        return value;
+    }
+
+    try {
+        return await decrypt(value);
+    } catch {
+        logger.warn(
+            'Decryption failed for stored master password. ' +
+            'Extension may have been reinstalled. ' +
+            'Please re-enter your credentials.'
+        );
+        return '';
+    }
+}
 
 /**
  * 创建 OptionsSync 实例
@@ -107,11 +129,12 @@ const optionsStorage = new OptionsSync({
  */
 export async function getAllDecrypted(): Promise<Record<string, unknown>> {
     const options = await optionsStorage.getAll();
-    
-    const masterPassword = options.masterPassword as string || '';
+
+    const masterPassword = await decryptStoredMasterPassword(options[MASTER_PASSWORD_FIELD] as string | undefined);
+    options[MASTER_PASSWORD_FIELD] = masterPassword;
     const hasMasterPassword = !!masterPassword;
-    
-    for (const field of SENSITIVE_FIELDS) {
+
+    for (const field of CREDENTIAL_FIELDS) {
         const value = options[field] as string;
         if (value && isEncrypted(value)) {
             try {
@@ -219,31 +242,27 @@ export async function setEncrypted(options: Record<string, unknown>, oldMasterPa
     validateOptions(options);
     
     const newMasterPassword = options.masterPassword as string || '';
-    const oldPassword = oldMasterPassword || '';
-    
-    // 如果主密码变更，先使用旧密码解密验证，确保旧密码正确
-    // 然后使用旧密码解密敏感字段，以便用新密码重新加密
     const encryptedOptions = { ...options };
     const existingOptions = await optionsStorage.getAll();
-    
-    for (const field of SENSITIVE_FIELDS) {
+    const storedMasterPassword = await decryptStoredMasterPassword(existingOptions[MASTER_PASSWORD_FIELD] as string | undefined);
+    const oldPassword = oldMasterPassword || storedMasterPassword;
+
+    for (const field of CREDENTIAL_FIELDS) {
         const currentValue = existingOptions[field] as string;
-        // 如果该字段已加密存储，需要先解密
+
+        if (Object.prototype.hasOwnProperty.call(encryptedOptions, field)) {
+            continue;
+        }
+
         if (currentValue && isEncrypted(currentValue)) {
             try {
-                // 优先使用旧主密码解密（如果有）
                 if (oldPassword) {
                     encryptedOptions[field] = await decrypt(currentValue, oldPassword);
-                } else if (existingOptions.masterPassword && (existingOptions.masterPassword as string)) {
-                    // 回退到使用存储中的旧主密码
-                    encryptedOptions[field] = await decrypt(currentValue, existingOptions.masterPassword as string);
                 } else {
-                    // 没有主密码 - 使用扩展 ID 解密（兼容模式）
                     encryptedOptions[field] = await decrypt(currentValue);
                 }
             } catch (error: unknown) {
-                // 旧密码解密失败，数据无法迁移
-                if (oldPassword || (existingOptions.masterPassword && (existingOptions.masterPassword as string))) {
+                if (oldPassword) {
                     const errorMsg = error instanceof Error ? error.message : String(error);
                     logger.error(`setEncrypted: 旧密码解密 ${field} 失败`, { error: errorMsg });
                     throw new Error(
@@ -256,12 +275,17 @@ export async function setEncrypted(options: Record<string, unknown>, oldMasterPa
         }
     }
     
-    // 现在用新主密码重新加密敏感字段
-    for (const field of SENSITIVE_FIELDS) {
+    for (const field of CREDENTIAL_FIELDS) {
         const value = encryptedOptions[field] as string;
         if (value && typeof value === 'string' && !isEncrypted(value)) {
             encryptedOptions[field] = await encrypt(value, newMasterPassword || undefined);
         }
+    }
+
+    if (newMasterPassword) {
+        encryptedOptions[MASTER_PASSWORD_FIELD] = await encrypt(newMasterPassword);
+    } else {
+        encryptedOptions[MASTER_PASSWORD_FIELD] = '';
     }
     
     await optionsStorage.set(encryptedOptions);

@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { Container, Form, Button, Col, Row, InputGroup, Card, Table, Modal } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './options.css'
-import optionsStorage, { setEncrypted } from '../../utils/optionsStorage'
+import { getAllDecrypted, setEncrypted } from '../../utils/optionsStorage'
 import { testWebDAVConnection } from '../../utils/webdav'
 import { BackupRecord } from '../../utils/models'
 
@@ -92,7 +92,7 @@ const Options: React.FC = () => {
     
     useEffect(() => {
         const loadSettings = async () => {
-            const options = await optionsStorage.getAll();
+            const options = await getAllDecrypted();
             setGithubToken(options.githubToken as string || '');
             setGistID(options.gistID as string || '');
             setGistFileName(options.gistFileName as string || 'BookmarkHub');

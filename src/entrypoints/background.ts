@@ -1,17 +1,17 @@
-import BookmarkService from '../utils/services'
 import { Setting } from '../utils/setting'
 import { startAutoSync, stopAutoSync, performSync, getIsSyncing, getIsSuppressingEvents, registerBookmarkEventCallback } from '../utils/sync'
 import optionsStorage from '../utils/optionsStorage'
 import iconLogo from '../assets/icon.png'
-import { OperType, BookmarkInfo, SyncDataInfo, RootBookmarksType, BrowserType, SyncData } from '../utils/models'
+import { OperType, BookmarkInfo, RootBookmarksType, BrowserType } from '../utils/models'
 import { Bookmarks } from 'wxt/browser'
-import { getBookmarkCount, formatBookmarks, normalizeBookmarkIds } from '../utils/bookmarkUtils'
-import { createError, handleError } from '../utils/errors'
+import { getBookmarkCount } from '../utils/bookmarkUtils'
+import { handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
 import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS, MV3_CONFIG } from '../utils/constants'
 import { getBackupRecords, restoreFromBackup, deleteBackupRecord, getLocalCache, saveLocalCache, createEmptyLocalCache } from '../utils/localCache'
 import { getBrowserInfo } from '../utils/browserInfo'
 import { Tombstone } from '../utils/models'
+import { downloadManualBookmarks, uploadManualBookmarks } from '../utils/manualSyncTransfer'
 
 export default defineBackground(() => {
 
@@ -143,11 +143,13 @@ export default defineBackground(() => {
         curOperType = OperType.SYNC;
         try {
           await uploadBookmarks();
+          safeSendResponse(sendResponse, { success: true });
+        } catch (error) {
+          safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
         } finally {
           curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
-          refreshLocalCount();
-          safeSendResponse(sendResponse, true);
+          await refreshLocalCount();
         }
       });
       return true;
@@ -165,13 +167,13 @@ export default defineBackground(() => {
         curOperType = OperType.SYNC;
         try {
           await downloadBookmarks();
-          safeSendResponse(sendResponse, true);
+          safeSendResponse(sendResponse, { success: true });
         } catch (error) {
-          safeSendResponse(sendResponse, { error: handleError(error).message });
+          safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
         } finally {
           curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
-          refreshLocalCount();
+          await refreshLocalCount();
         }
       });
       return true;
@@ -181,11 +183,31 @@ export default defineBackground(() => {
         curOperType = OperType.REMOVE;
         try {
           await clearBookmarkTree();
-          safeSendResponse(sendResponse, true);
+          const setting = await Setting.build();
+          if (setting.enableNotify) {
+            await browser.notifications.create({
+              type: "basic",
+              iconUrl: iconLogo,
+              title: browser.i18n.getMessage('removeAllBookmarks'),
+              message: browser.i18n.getMessage('success')
+            });
+          }
+          safeSendResponse(sendResponse, { success: true });
+        } catch (error) {
+          const setting = await Setting.build();
+          if (setting.enableNotify) {
+            await browser.notifications.create({
+              type: "basic",
+              iconUrl: iconLogo,
+              title: browser.i18n.getMessage('removeAllBookmarks'),
+              message: `${browser.i18n.getMessage('error')}：${handleError(error).toUserString()}`
+            });
+          }
+          safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
         } finally {
           curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
-          refreshLocalCount();
+          await refreshLocalCount();
         }
       });
       return true;
@@ -198,9 +220,13 @@ export default defineBackground(() => {
     }
     if (msg.name === 'sync') {
       // performSync 内部已有 isSyncing 检查
-      performSync().then(result => {
-        safeSendResponse(sendResponse, result);
-      });
+      performSync()
+        .then(result => {
+          safeSendResponse(sendResponse, result);
+        })
+        .catch(error => {
+          safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
+        });
       return true;
     }
     if (msg.name === 'getBackupRecords') {
@@ -220,10 +246,10 @@ export default defineBackground(() => {
           }
           await clearBookmarkTree();
           await createBookmarkTree(bookmarks);
-          refreshLocalCount();
+          await refreshLocalCount();
           safeSendResponse(sendResponse, { success: true, count: getBookmarkCount(bookmarks) });
         } catch (error) {
-          safeSendResponse(sendResponse, { error: handleError(error).message });
+          safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
         } finally {
           curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
@@ -317,28 +343,8 @@ export default defineBackground(() => {
   async function uploadBookmarks() {
     try {
       const setting = await Setting.build();
-      
-      if (!setting.githubToken) {
-        throw createError.authTokenMissing();
-      }
-      if (!setting.gistID) {
-        throw createError.gistIdMissing();
-      }
-      if (!setting.gistFileName) {
-        throw createError.fileNameMissing();
-      }
-      
       const bookmarks = await getBookmarks();
-      const syncdata = createSyncData(bookmarks);
-      
-      await BookmarkService.update({
-        files: {
-          [setting.gistFileName]: {
-            content: JSON.stringify(syncdata)
-          }
-        },
-        description: setting.gistFileName
-      });
+      const syncdata = await uploadManualBookmarks(setting, bookmarks);
       
       const count = getBookmarkCount(syncdata.backupRecords[0].bookmarkData);
       await browser.storage.local.set({ [STORAGE_KEYS.REMOTE_COUNT]: count, [STORAGE_KEYS.LOCAL_COUNT]: count });
@@ -353,21 +359,8 @@ export default defineBackground(() => {
       const err = handleError(error);
       logger.error(err.toLogString());
       await showErrorNotification('uploadBookmarks', err.toUserString());
+      throw err;
     }
-  }
-  
-  function createSyncData(bookmarks: BookmarkInfo[]): SyncData {
-    return {
-      version: '2.0',
-      lastSyncTimestamp: Date.now(),
-      sourceBrowser: getBrowserInfo(),
-      backupRecords: [{
-        backupTimestamp: Date.now(),
-        bookmarkData: formatBookmarks(bookmarks) || [],
-        bookmarkCount: getBookmarkCount(bookmarks)
-      }],
-      tombstones: []
-    };
   }
   
   async function notifyRefreshCounts(): Promise<void> {
@@ -398,32 +391,7 @@ export default defineBackground(() => {
   async function downloadBookmarks() {
     try {
       const setting = await Setting.build();
-      const gist = await BookmarkService.get();
-      
-      if (!gist) {
-        throw createError.fileNotFound(setting.gistFileName);
-      }
-      
-      const data = JSON.parse(gist);
-      let bookmarks: BookmarkInfo[];
-
-      // 检测数据版本，兼容 v1.0 和 v2.0 格式
-      if (data.version === '2.0') {
-        logger.info('downloadBookmarks: 检测到格式 v2.0');
-        if (!data.backupRecords || data.backupRecords.length === 0) {
-          throw createError.emptyGistFile(setting.gistFileName);
-        }
-        bookmarks = data.backupRecords[0].bookmarkData;
-      } else if (data.bookmarks) {
-        logger.info('downloadBookmarks: 检测到格式 v1.0（旧格式）');
-        bookmarks = data.bookmarks;
-      } else {
-        throw createError.invalidDataFormat();
-      }
-      
-      if (!bookmarks || bookmarks.length === 0) {
-        throw createError.emptyGistFile(setting.gistFileName);
-      }
+      const bookmarks = await downloadManualBookmarks(setting);
       
       await clearBookmarkTree();
       normalizeFolderNames(bookmarks);
@@ -442,6 +410,7 @@ export default defineBackground(() => {
       const err = handleError(error);
       logger.error(err.toLogString());
       await showErrorNotification('downloadBookmarks', err.toUserString());
+      throw err;
     }
   }
 
@@ -469,81 +438,48 @@ export default defineBackground(() => {
   }
 
 async function clearBookmarkTree() {
-    try {
-      let setting = await Setting.build()
-      if (setting.githubToken == '') {
-        throw createError.authTokenMissing();
-      }
-      if (setting.gistID == '') {
-        throw createError.gistIdMissing();
-      }
-      if (setting.gistFileName == '') {
-        throw createError.fileNameMissing();
-      }
+    const bookmarks = await getBookmarks();
 
-      let bookmarks = await getBookmarks();
+    function isRootFolderId(id: string): boolean {
+      return ROOT_NODE_IDS.ROOT.includes(id) ||
+             ROOT_NODE_IDS.TOOLBAR.includes(id) ||
+             ROOT_NODE_IDS.UNFILED.includes(id) ||
+             ROOT_NODE_IDS.MOBILE.includes(id) ||
+             ROOT_NODE_IDS.MENU.includes(id);
+    }
 
-      function isRootFolderId(id: string): boolean {
-        return ROOT_NODE_IDS.ROOT.includes(id) ||
-               ROOT_NODE_IDS.TOOLBAR.includes(id) ||
-               ROOT_NODE_IDS.UNFILED.includes(id) ||
-               ROOT_NODE_IDS.MOBILE.includes(id) ||
-               ROOT_NODE_IDS.MENU.includes(id);
-      }
-
-      function collectAllNodes(nodes: BookmarkInfo[]): BookmarkInfo[] {
-        let result: BookmarkInfo[] = [];
-        for (const node of nodes) {
-          if (node.id && !ROOT_NODE_IDS.ROOT.includes(node.id) && !isRootFolderId(node.id)) {
-            result.push(node);
-          }
-          if (node.children) {
-            result = result.concat(collectAllNodes(node.children));
-          }
+    function collectAllNodes(nodes: BookmarkInfo[]): BookmarkInfo[] {
+      let result: BookmarkInfo[] = [];
+      for (const node of nodes) {
+        if (node.id && !ROOT_NODE_IDS.ROOT.includes(node.id) && !isRootFolderId(node.id)) {
+          result.push(node);
         }
-        return result;
-      }
-
-      const allNodes = collectAllNodes(bookmarks);
-      logger.debug('clearBookmarkTree: Total nodes to delete', allNodes.length);
-
-      // 逆序删除：先删除子节点，再删除父节点，避免孤儿节点
-      const reversedNodes = allNodes.slice().reverse();
-
-      let deletedCount = 0;
-      let failedCount = 0;
-      for (const node of reversedNodes) {
-        try {
-          if (node.id) {
-            await browser.bookmarks.removeTree(node.id);
-            deletedCount++;
-          }
-        } catch (err) {
-          failedCount++;
-          logger.warn('Failed to delete bookmark', { id: node.id, title: node.title });
+        if (node.children) {
+          result = result.concat(collectAllNodes(node.children));
         }
       }
-      logger.info(`clearBookmarkTree completed: ${deletedCount} deleted, ${failedCount} failed`);
+      return result;
+    }
 
-      if (curOperType === OperType.REMOVE && setting.enableNotify) {
-        await browser.notifications.create({
-          type: "basic",
-          iconUrl: iconLogo,
-          title: browser.i18n.getMessage('removeAllBookmarks'),
-          message: browser.i18n.getMessage('success')
-        });
+    const allNodes = collectAllNodes(bookmarks);
+    logger.debug('clearBookmarkTree: Total nodes to delete', allNodes.length);
+
+    const reversedNodes = allNodes.slice().reverse();
+
+    let deletedCount = 0;
+    let failedCount = 0;
+    for (const node of reversedNodes) {
+      try {
+        if (node.id) {
+          await browser.bookmarks.removeTree(node.id);
+          deletedCount++;
+        }
+      } catch (err) {
+        failedCount++;
+        logger.warn('Failed to delete bookmark', { id: node.id, title: node.title });
       }
     }
-    catch (error: unknown) {
-      const err = handleError(error);
-      logger.error(err.toLogString());
-      await browser.notifications.create({
-        type: "basic",
-        iconUrl: iconLogo,
-        title: browser.i18n.getMessage('removeAllBookmarks'),
-        message: `${browser.i18n.getMessage('error')}：${err.toUserString()}`
-      });
-    }
+    logger.info(`clearBookmarkTree completed: ${deletedCount} deleted, ${failedCount} failed`);
   }
 
 async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, parentId: string = ROOT_NODE_IDS.ROOT[0]) {

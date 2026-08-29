@@ -296,6 +296,13 @@ const Options: React.FC = () => {
                             <Col sm={9} lg={10} xs={9}><Form.Control type="text" value={gistFileName} onChange={(e) => setGistFileName(e.target.value)} placeholder={browser.i18n.getMessage('gistFileNamePlaceholder')} size="sm" /></Col>
                         </Form.Group>
                         <Form.Group as={Row}>
+                            <Form.Label column="sm" sm={3} lg={2} xs={3}></Form.Label>
+                            <Col sm={9} lg={10} xs={9}>
+                                <Button variant="outline-secondary" size="sm" onClick={handleTestGithub} disabled={testingGithub} aria-label={browser.i18n.getMessage('testGithubConnection')}>{testingGithub ? browser.i18n.getMessage('testing') : browser.i18n.getMessage('testGithubConnection')}</Button>
+                                {githubStatus && <span className={`ml-2 ${githubStatus.ok ? 'text-success' : 'text-danger'}`} role="status" aria-live="polite">{githubStatus.message}</span>}
+                            </Col>
+                        </Form.Group>
+                        <Form.Group as={Row}>
                             <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('enableNotifications')}</Form.Label>
                             <Col sm={9} lg={10} xs={9}><Form.Check id="enableNotify" type="switch" checked={enableNotify} onChange={(e) => setEnableNotify(e.target.checked)} aria-label={browser.i18n.getMessage('enableNotifications')} /></Col>
                         </Form.Group>

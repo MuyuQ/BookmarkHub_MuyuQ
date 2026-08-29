@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import BookmarkService from './services';
-import type { BookmarkInfo } from './models';
 
 vi.mock('./setting', () => ({
   Setting: {

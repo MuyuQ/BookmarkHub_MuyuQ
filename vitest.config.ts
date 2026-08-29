@@ -12,13 +12,24 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
+      include: ['src/**'],
       exclude: [
         'node_modules/',
+        // 入口点纳入统计（先统计后补测），但阈值门禁仅针对 utils 核心
         'src/entrypoints/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/types.ts',
       ],
+      thresholds: {
+        // P3-6 覆盖率门禁：utils 核心 ≥70%（当前基线 ~69%，补测后达标）
+        'src/utils/**': {
+          statements: 70,
+          branches: 55,
+          functions: 65,
+          lines: 70,
+        },
+      },
     },
     setupFiles: ['./tests/setup.ts'],
   },

@@ -147,7 +147,8 @@ export async function getAllDecrypted(): Promise<Record<string, unknown>> {
                 }
             } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                
+                logger.debug(`getAllDecrypted: decrypt ${field} failed`, { error: errorMsg });
+
                 if (hasMasterPassword) {
                     // Master password set but decryption failed - don't fallback
                     logger.error(
@@ -218,7 +219,7 @@ function validateOptions(options: Record<string, unknown>): void {
     const gistFileName = options.gistFileName as string;
     if (gistFileName && typeof gistFileName === 'string' && gistFileName.trim()) {
         // 检查是否包含路径分隔符或其他危险字符
-        if (/[\/\\:*?"<>|]/.test(gistFileName)) {
+        if (/[/\\:*?"<>|]/.test(gistFileName)) {
             throw new ValidationError(
                 'gistFileName contains invalid characters',
                 'gistFileName',
@@ -266,7 +267,8 @@ export async function setEncrypted(options: Record<string, unknown>, oldMasterPa
                     const errorMsg = error instanceof Error ? error.message : String(error);
                     logger.error(`setEncrypted: 旧密码解密 ${field} 失败`, { error: errorMsg });
                     throw new Error(
-                        `无法使用旧密码解密 ${field}。请确认旧主密码正确，或重新输入凭证。`
+                        `无法使用旧密码解密 ${field}。请确认旧主密码正确，或重新输入凭证。`,
+                        { cause: error }
                     );
                 }
                 // 如果没有旧密码且解密失败，保留空值

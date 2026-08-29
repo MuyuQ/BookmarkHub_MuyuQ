@@ -437,8 +437,6 @@ describe('testWebDAVConnection', () => {
   });
 
   it('should succeed with full read-write-delete cycle', async () => {
-    const testPath = '/.bookmarkhub-test-1234567890';
-    
     const mockWriteResponse = { ok: true };
     const mockReadResponse = { ok: true, text: vi.fn().mockResolvedValue('test') };
     const mockDeleteResponse = { ok: true };

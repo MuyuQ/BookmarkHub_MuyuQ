@@ -501,7 +501,7 @@ export default defineBackground(() => {
   }
 
   async function getBookmarks() {
-    let bookmarkTree: BookmarkInfo[] = await browser.bookmarks.getTree();
+    const bookmarkTree: BookmarkInfo[] = await browser.bookmarks.getTree();
     return bookmarkTree;
   }
 
@@ -562,7 +562,7 @@ async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, pare
     let failedCount = 0;
 
     for (let i = 0; i < bookmarkList.length; i++) {
-      let node = bookmarkList[i];
+      const node = bookmarkList[i];
       logger.debug('Processing bookmark', { title: node.title, parentId: node.parentId });
 
       // P1-7: 跳过旧数据中的合成根节点（空标题文件夹，如 folder_0 包裹）与分隔线，
@@ -648,7 +648,7 @@ async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, pare
   }
 
 async function refreshLocalCount() {
-    let bookmarkList = await getBookmarks();
+    const bookmarkList = await getBookmarks();
     const count = getBookmarkCount(bookmarkList);
     await browser.storage.local.set({ [STORAGE_KEYS.LOCAL_COUNT]: count });
   }

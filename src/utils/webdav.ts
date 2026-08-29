@@ -15,6 +15,7 @@ import { HTTP_TIMEOUTS } from './constants';
  * 危险路径模式 - 用于检测路径遍历攻击
  * 包括: .. (目录遍历), // (双斜杠), \ (反斜杠), \0 和 \u0000 (空字节)
  */
+// eslint-disable-next-line no-control-regex -- \0 是刻意保留的空字节攻击检测
 const FORBIDDEN_PATH_PATTERNS = /\.\.|\/\/|\\|\0|\u0000/g;
 
 /**

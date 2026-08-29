@@ -155,7 +155,6 @@ export function normalizeBookmarkIds(
     for (const bookmark of bookmarks) {
         // 生成稳定 ID
         const newId = generateStableId(bookmark, parentPath);
-        const oldId = bookmark.id;
         bookmark.id = newId;
         
         // 关键修复：始终更新 parentId

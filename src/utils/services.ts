@@ -11,7 +11,6 @@
 
 import { Setting } from './setting';
 import { http } from './http';
-import { BookmarkInfo } from './models';
 import { retryOperation } from './retry';
 import { createError } from './errors';
 import { logger } from './logger';
@@ -171,7 +170,7 @@ class BookmarkService {
                 const sanitizedMessage = sanitizeToken(errorMessage, setting.githubToken);
                 if (sanitizedMessage !== errorMessage) {
                     // 错误消息中包含 token，使用清理后的消息
-                    throw new Error(`GitHub API request failed: ${sanitizedMessage}`);
+                    throw new Error(`GitHub API request failed: ${sanitizedMessage}`, { cause: error });
                 }
                 throw error;
             }
@@ -226,7 +225,7 @@ class BookmarkService {
                 const sanitizedMessage = sanitizeToken(errorMessage, setting.githubToken);
                 if (sanitizedMessage !== errorMessage) {
                     // 错误消息中包含 token，使用清理后的消息
-                    throw new Error(`GitHub API update request failed: ${sanitizedMessage}`);
+                    throw new Error(`GitHub API update request failed: ${sanitizedMessage}`, { cause: error });
                 }
                 throw error;
             }

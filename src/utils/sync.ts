@@ -29,7 +29,7 @@ import { getBrowserInfo } from './browserInfo';
 import { fetchRemoteData, extractBookmarksFromData, isSyncData } from './sync/dataFetcher';
 import { uploadSnapshot } from './sync/uploader';
 import { getLocalBookmarkTree, applyMergeToLocalTree } from './sync/writeback';
-import { syncListeners, replayPendingBookmarkEvents, beginBulkBookmarkOperation, endBulkBookmarkOperation, type BookmarkEventType } from './sync/listeners';
+import { syncListeners, replayPendingBookmarkEvents, beginBulkBookmarkOperation, endBulkBookmarkOperation } from './sync/listeners';
 import {
     getIsSyncing, setSyncing,
     getIsSuppressingEvents, setSuppressingEvents,

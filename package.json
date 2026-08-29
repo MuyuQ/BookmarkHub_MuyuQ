@@ -22,7 +22,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "validate:locales": "node scripts/validate-locales.mjs"
+    "validate:locales": "node scripts/validate-locales.mjs",
+    "lint": "eslint src tests --ext .ts,.tsx",
+    "lint:fix": "eslint src tests --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\""
   },
   "dependencies": {
     "bootstrap": "^4.6.0",
@@ -34,6 +38,7 @@
     "webext-options-sync": "^4.3.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/chrome": "^0.0.280",
@@ -42,8 +47,12 @@
     "@vitest/coverage-v8": "^4.1.0",
     "@wxt-dev/auto-icons": "^1.0.2",
     "@wxt-dev/module-react": "^1.1.1",
+    "eslint": "^10.9.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^29.0.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.6.3",
+    "typescript-eslint": "^8.68.0",
     "vitest": "^4.1.0",
     "wxt": "^0.19.13"
   }

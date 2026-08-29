@@ -8,7 +8,6 @@
 import { Setting } from '../setting';
 import { SyncData, BackupRecord, Tombstone, SyncDataInfo } from '../models';
 import { getBookmarkCount } from '../bookmarkUtils';
-import { handleError } from '../errors';
 import { logger } from '../logger';
 import { mergeTombstones } from '../merge';
 import { sortBackupRecords } from '../localCache';

@@ -5,10 +5,9 @@
  * 提供缓存的获取、保存、验证等功能
  */
 
-import { BookmarkInfo, SyncData, BackupRecord, BrowserInfo, Tombstone } from './models';
-import { BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS } from './constants';
-import { getBrowserInfo } from './browserInfo';
-import { getBookmarkCount, normalizeTreeShape } from './bookmarkUtils';
+import { BookmarkInfo, SyncData, BackupRecord } from './models';
+import { BACKUP_STORAGE_KEYS } from './constants';
+import { normalizeTreeShape } from './bookmarkUtils';
 import { logger } from './logger';
 
 /**

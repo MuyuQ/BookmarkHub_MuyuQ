@@ -12,6 +12,7 @@ import { logger } from '../logger';
 import { Setting } from '../setting';
 import { createError } from '../errors';
 import { normalizeTreeShape } from '../bookmarkUtils';
+import { safeJsonParse, sanitizeBookmarkTree } from '../sanitize';
 
 /** 远程数据最大允许大小 (10 MB) */
 const MAX_REMOTE_DATA_SIZE = 10 * 1024 * 1024;
@@ -58,8 +59,9 @@ export function extractBookmarksFromData(data: SyncData | SyncDataInfo | null): 
         bookmarks = data.bookmarks;
     }
 
-    // 兼容历史数据中的虚拟根/合成根节点包裹，统一为剥根格式（P0-4）
-    return bookmarks ? normalizeTreeShape(bookmarks) : undefined;
+    // 兼容历史数据中的虚拟根/合成根节点包裹，统一为剥根格式（P0-4），
+    // 并按统一安全标准清洗（协议白名单/标题去标签，P1-11）
+    return bookmarks ? normalizeTreeShape(sanitizeBookmarkTree(bookmarks)) : undefined;
 }
 
 /**
@@ -96,21 +98,24 @@ export async function fetchRemoteData(setting: Setting): Promise<SyncData | Sync
     }
 
     try {
-        const data = JSON.parse(content);
-        
+        // P1-11: 安全解析——带原型污染防护；解析失败视为"远程数据损坏"，
+        // 抛错中止同步而不是返回 null（返回 null 会让同步以"远程无数据"继续，
+        // 进而被本地快照覆盖，造成数据丢失）
+        const data = safeJsonParse(content);
+
         // 版本检测
-        if (data.version === '2.0') {
+        if (data && typeof data === 'object' && (data as { version?: string }).version === '2.0') {
             logger.info('fetchRemoteData: 检测到格式 v2.0');
             return data as SyncData;
-        } else if (data.bookmarks && !data.backupRecords) {
+        } else if (data && typeof data === 'object' && Array.isArray((data as { bookmarks?: unknown }).bookmarks) && !((data as Record<string, unknown>).backupRecords)) {
             logger.info('fetchRemoteData: 检测到格式 v1.0（旧格式）');
             return data as SyncDataInfo;
         }
-        
-        logger.warn('fetchRemoteData: 未知数据格式', { keys: Object.keys(data) });
-        return null;
+
+        logger.error('fetchRemoteData: 无法识别的远程数据格式，中止同步', { keys: Object.keys((data as object) || {}) });
+        throw createError.parseError('Unrecognized remote sync data format');
     } catch (error) {
-        logger.error('fetchRemoteData: 解析远程数据失败', error);
-        return null;
+        logger.error('fetchRemoteData: 远程数据解析失败，中止同步', error);
+        throw error instanceof Error ? error : createError.parseError('Failed to parse remote sync data');
     }
 }

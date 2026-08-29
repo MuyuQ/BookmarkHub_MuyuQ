@@ -13,7 +13,47 @@ import { Setting } from './setting';
 import { http } from './http';
 import { BookmarkInfo } from './models';
 import { retryOperation } from './retry';
+import { createError } from './errors';
 import { logger } from './logger';
+
+/**
+ * raw_url 允许的主机白名单 (P1-10)
+ * truncated Gist 的 raw_url 理论上可指向任意主机，
+ * 若复用带 Authorization 头的 http 实例请求，GitHub Token 会泄漏到第三方服务器
+ */
+const GIST_RAW_HOSTS = new Set([
+    'gist.githubusercontent.com',
+    'raw.githubusercontent.com',
+    'github.com',
+    'objects.githubusercontent.com',
+]);
+
+/** raw_url 内容拉取超时 (毫秒) */
+const GIST_RAW_TIMEOUT_MS = 30000;
+
+/**
+ * 获取 truncated Gist 的完整内容
+ * 使用独立的无凭证请求（不带 Authorization），且目标主机必须在白名单内
+ */
+async function fetchGistRawContent(rawUrl: string): Promise<string> {
+    let parsed: URL;
+    try {
+        parsed = new URL(rawUrl);
+    } catch {
+        throw createError.parseError(`Invalid gist raw_url: ${rawUrl}`);
+    }
+    if (parsed.protocol !== 'https:' || !GIST_RAW_HOSTS.has(parsed.hostname)) {
+        logger.error('fetchGistRawContent: raw_url host not in whitelist, request rejected', {
+            hostname: parsed.hostname,
+        });
+        throw createError.parseError(`Untrusted gist raw_url host: ${parsed.hostname}`);
+    }
+    const resp = await fetch(parsed.toString(), { signal: AbortSignal.timeout(GIST_RAW_TIMEOUT_MS) });
+    if (!resp.ok) {
+        throw createError.networkError(`Failed to fetch gist raw content (HTTP ${resp.status})`);
+    }
+    return resp.text();
+}
 
 /**
  * 转义正则表达式中的特殊字符
@@ -127,7 +167,8 @@ class BookmarkService {
                         const gistFile = resp.files[setting.gistFileName];
                         
                         if (gistFile.truncated) {
-                            const txt = await http.get(gistFile.raw_url, { prefixUrl: '' }).text();
+                            // P1-10: 白名单校验 + 无凭证请求，token 不发往 GitHub 以外的主机
+                            const txt = await fetchGistRawContent(gistFile.raw_url);
                             return txt;
                         } else {
                             return gistFile.content;

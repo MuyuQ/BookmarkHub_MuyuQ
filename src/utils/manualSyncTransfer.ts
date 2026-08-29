@@ -18,6 +18,7 @@ import { getBrowserInfo } from './browserInfo';
 import BookmarkService from './services';
 import { webdavRead } from './webdav';
 import { createError } from './errors';
+import { safeJsonParse, sanitizeBookmarkTree } from './sanitize';
 import { logger } from './logger';
 
 export async function uploadManualBookmarks(setting: Setting, bookmarks: BookmarkInfo[]): Promise<SyncData> {
@@ -69,9 +70,9 @@ export async function downloadManualBookmarks(setting: Setting): Promise<Bookmar
 
     let data: unknown;
     try {
-        data = JSON.parse(content);
+        // P1-11: 安全解析（原型污染防护），损坏数据给出明确错误而不是裸 SyntaxError
+        data = safeJsonParse(content);
     } catch {
-        // 远程文件损坏时给出明确错误，而不是裸 SyntaxError
         throw createError.parseError('Remote sync data is not valid JSON');
     }
 
@@ -80,12 +81,13 @@ export async function downloadManualBookmarks(setting: Setting): Promise<Bookmar
         if (!bookmarks || bookmarks.length === 0) {
             throw createError.emptyGistFile(setting.gistFileName);
         }
-        return normalizeTreeShape(bookmarks);
+        // 与同步路径同一安全标准：协议白名单、标题清洗、剥根归一化
+        return normalizeTreeShape(sanitizeBookmarkTree(bookmarks));
     }
 
     const legacyBookmarks = (data as { bookmarks?: BookmarkInfo[] }).bookmarks;
     if (Array.isArray(legacyBookmarks) && legacyBookmarks.length > 0) {
-        return normalizeTreeShape(legacyBookmarks);
+        return normalizeTreeShape(sanitizeBookmarkTree(legacyBookmarks));
     }
 
     throw createError.invalidDataFormat();

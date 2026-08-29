@@ -133,6 +133,35 @@ const Options: React.FC = () => {
                 setSaveStatus('idle');
                 return;
             }
+
+            // P1-14: WebDAV 模式按需申请单个 origin 的主机权限（替代全站 optional 授权）
+            // permissions.request 必须在用户手势内调用——表单提交满足条件
+            if (storageType === 'webdav' && webdavUrl.trim()) {
+                let granted = false;
+                try {
+                    const origin = new URL(webdavUrl).origin + '/*';
+                    granted = await browser.permissions.request({ origins: [origin] });
+                    if (granted) {
+                        // URL 变更时清理旧 origin 的授权（尽力而为）
+                        const stored = await getAllDecrypted();
+                        const oldUrl = stored.webdavUrl as string;
+                        if (oldUrl && oldUrl !== webdavUrl) {
+                            const oldOrigin = new URL(oldUrl).origin + '/*';
+                            if (oldOrigin !== origin) {
+                                await browser.permissions.remove({ origins: [oldOrigin] }).catch(() => undefined);
+                            }
+                        }
+                    }
+                } catch {
+                    // URL 无法解析等情况：交由 setEncrypted 的校验抛出友好错误
+                }
+                if (!granted) {
+                    setValidationErrors([browser.i18n.getMessage('webdavPermissionDenied')]);
+                    setSaveStatus('idle');
+                    return;
+                }
+            }
+
             await setEncrypted({
                 githubToken, gistID, gistFileName, enableNotify, enableAutoSync, enableIntervalSync,
                 syncInterval, enableEventSync, conflictMode, storageType, webdavUrl, webdavUsername,
@@ -192,7 +221,9 @@ const Options: React.FC = () => {
                                     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(e.target.value);
                                     setShowPasswordWarning(e.target.value.length > 0 && !(hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar)); 
                                 }} placeholder={browser.i18n.getMessage('leaveEmptyPlaceholder')} size="sm" aria-labelledby="masterPasswordLabel" aria-describedby="masterPasswordHelp" />
-                                {showPasswordWarning && <small id="masterPasswordHelp" className="text-warning d-block mt-1">{browser.i18n.getMessage('weakPasswordWarning')}</small>}
+                                {/* P1-13: 明示无主密码时的保护边界 */}
+                                <Form.Text id="masterPasswordHelp" className="d-block mt-1">{browser.i18n.getMessage('masterPasswordHint')}</Form.Text>
+                                {showPasswordWarning && <small className="text-warning d-block mt-1">{browser.i18n.getMessage('weakPasswordWarning')}</small>}
                             </Col>
                         </Form.Group>
                         <Form.Group as={Row}>

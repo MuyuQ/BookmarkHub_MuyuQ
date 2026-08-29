@@ -382,5 +382,13 @@
     "partialFailure": {
         "message": "部分书签恢复失败",
         "description": "下载/恢复完成但部分书签重建失败"
+    },
+    "masterPasswordHint": {
+        "message": "未设置主密码时，凭证仅使用扩展 ID（公开信息）派生的密钥加密，保护强度有限；设置主密码可获得真正的保护。",
+        "description": "主密码的安全边界提示"
+    },
+    "webdavPermissionDenied": {
+        "message": "WebDAV 主机权限被拒绝，扩展无法访问该 WebDAV 服务器。",
+        "description": "用户拒绝 WebDAV origin 权限请求时显示"
     }
 }

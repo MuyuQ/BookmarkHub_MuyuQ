@@ -124,21 +124,55 @@ describe('BookmarkService', () => {
       };
 
       vi.mocked(Setting.build).mockResolvedValue(createMockSetting());
-      
-      let callCount = 0;
-      vi.mocked(http.get).mockImplementation((url: any, options?: any) => {
-        callCount++;
-        const urlStr = typeof url === 'string' ? url : url.toString();
-        if (urlStr === mockRawUrl && options?.prefixUrl === '') {
-          return { text: vi.fn().mockResolvedValue(mockContent) } as any;
-        }
-        return { json: vi.fn().mockResolvedValue(mockResponse) } as any;
+      vi.mocked(http.get).mockReturnValue({
+        json: vi.fn().mockResolvedValue(mockResponse),
+      } as any);
+
+      // P1-10: raw_url 改用独立的无凭证 fetch（token 不出域）
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => mockContent,
       });
+      vi.stubGlobal('fetch', fetchSpy);
 
-      const result = await BookmarkService.get();
+      try {
+        const result = await BookmarkService.get();
 
-      expect(result).toBe(mockContent);
-      expect(callCount).toBe(2);
+        expect(result).toBe(mockContent);
+        expect(fetchSpy).toHaveBeenCalledWith(mockRawUrl, expect.objectContaining({ signal: expect.anything() }));
+        expect(http.get).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('should reject raw_url from non-whitelisted hosts (P1-10)', async () => {
+      const mockResponse = {
+        files: {
+          BookmarkHub: {
+            content: '',
+            truncated: true,
+            raw_url: 'https://evil.example.com/steal',
+          },
+        },
+      };
+
+      vi.mocked(Setting.build).mockResolvedValue(createMockSetting());
+      vi.mocked(http.get).mockReturnValue({
+        json: vi.fn().mockResolvedValue(mockResponse),
+      } as any);
+
+      const fetchSpy = vi.fn();
+      vi.stubGlobal('fetch', fetchSpy);
+
+      try {
+        await expect(BookmarkService.get()).rejects.toThrow('Untrusted gist raw_url host');
+        // 不允许向白名单以外的主机发起任何请求
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
 
     it('should throw error for invalid gistID format', async () => {

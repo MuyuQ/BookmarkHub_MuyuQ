@@ -510,5 +510,13 @@
     "partialFailure": {
         "message": "Completed with failures",
         "description": "Download/restore finished but some bookmarks failed to be recreated"
+    },
+    "masterPasswordHint": {
+        "message": "Without a master password, credentials are only encrypted with a key derived from the (public) extension ID — protection is weak. Set a master password for real protection.",
+        "description": "Security boundary hint for the optional master password"
+    },
+    "webdavPermissionDenied": {
+        "message": "WebDAV host permission was denied. The extension cannot access the WebDAV server without it.",
+        "description": "Shown when the user denies the WebDAV origin permission request"
     }
 }

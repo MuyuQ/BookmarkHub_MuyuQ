@@ -86,7 +86,7 @@ class MemBookmarkStore {
 
   async removeTree(id: string): Promise<void> {
     const parent = this.findParent(id);
-    if (!parent || !parent.children) throw new Error(`node not found: ${id}`);
+    if (!parent?.children) throw new Error(`node not found: ${id}`);
     const idx = parent.children.findIndex(c => c.id === id);
     const [removed] = parent.children.splice(idx, 1);
     parent.children.forEach((c, i) => { c.index = i; });
@@ -105,14 +105,16 @@ class MemBookmarkStore {
   async move(id: string, target: { parentId?: string; index?: number }): Promise<MemNode> {
     const node = this.findById(id);
     const oldParent = this.findParent(id);
-    const oldIdx = oldParent.children!.findIndex(c => c.id === id);
-    const [removed] = oldParent.children!.splice(oldIdx, 1);
-    oldParent.children!.forEach((c, i) => { c.index = i; });
+    if (!node || !oldParent?.children) throw new Error(`node not found: ${id}`);
+    const oldIdx = oldParent.children.findIndex(c => c.id === id);
+    const [removed] = oldParent.children.splice(oldIdx, 1);
+    oldParent.children.forEach((c, i) => { c.index = i; });
     const newParent = target.parentId ? this.findById(target.parentId) : oldParent;
+    if (!newParent?.children) throw new Error(`target parent not found: ${target.parentId}`);
     removed.parentId = newParent.id;
-    const idx = Math.min(target.index ?? newParent.children!.length, newParent.children!.length);
-    newParent.children!.splice(idx, 0, removed);
-    newParent.children!.forEach((c, i) => { c.index = i; });
+    const idx = Math.min(target.index ?? newParent.children.length, newParent.children.length);
+    newParent.children.splice(idx, 0, removed);
+    newParent.children.forEach((c, i) => { c.index = i; });
     this.onMoved.forEach(cb => cb(id, { parentId: newParent.id, index: removed.index }));
     return node;
   }
@@ -228,10 +230,10 @@ describe('P0-2: 合并结果写回本地书签树', () => {
     store = new MemBookmarkStore();
 
     mockBookmarks.getTree.mockImplementation(() => store.getTree());
-    mockBookmarks.create.mockImplementation((...args) => store.create(...args));
-    mockBookmarks.removeTree.mockImplementation((...args) => store.removeTree(...args));
-    mockBookmarks.update.mockImplementation((...args) => store.update(...args));
-    mockBookmarks.move.mockImplementation((...args) => store.move(...args));
+    mockBookmarks.create.mockImplementation(async (details: { parentId?: string; title?: string; url?: string; index?: number }) => store.create(details));
+    mockBookmarks.removeTree.mockImplementation(async (id: string) => store.removeTree(id));
+    mockBookmarks.update.mockImplementation(async (id: string, changes: { title?: string; url?: string }) => store.update(id, changes));
+    mockBookmarks.move.mockImplementation(async (id: string, target: { parentId?: string; index?: number }) => store.move(id, target));
 
     vi.mocked(Setting.build).mockResolvedValue(githubSetting);
   });
@@ -248,7 +250,7 @@ describe('P0-2: 合并结果写回本地书签树', () => {
     let uploadedContent = '';
     vi.mocked(BookmarkService.update).mockImplementation(async (payload: { files: Record<string, { content: string }> }) => {
       uploadedContent = Object.values(payload.files)[0].content;
-      return {};
+      return {} as never;
     });
 
     const result = await performSync();
@@ -287,7 +289,7 @@ describe('P0-2: 合并结果写回本地书签树', () => {
     let uploadedContent = '';
     vi.mocked(BookmarkService.update).mockImplementation(async (payload: { files: Record<string, { content: string }> }) => {
       uploadedContent = Object.values(payload.files)[0].content;
-      return {};
+      return {} as never;
     });
 
     // 第一次同步：C 写回本地
@@ -326,7 +328,7 @@ describe('P0-2: 合并结果写回本地书签树', () => {
     let uploadedContent = remoteContent;
     vi.mocked(BookmarkService.update).mockImplementation(async (payload: { files: Record<string, { content: string }> }) => {
       uploadedContent = Object.values(payload.files)[0].content;
-      return {};
+      return {} as never;
     });
 
     await performSync();
@@ -336,7 +338,7 @@ describe('P0-2: 合并结果写回本地书签树', () => {
     const stableId = generateStableId({ title: 'A', url: 'https://a.example.com' } as never);
     await store.removeTree('10');
 
-    const cache = storageMap.get('bookmarkHubCache') as { tombstones: Array<{ id: string }>; backupRecords: unknown[] };
+    const cache = storageMap.get('bookmarkHubCache') as { tombstones: Array<{ id: string; deletedAt: number; deletedBy: string }>; backupRecords: unknown[] };
     cache.tombstones.push({ id: stableId, deletedAt: Date.now(), deletedBy: 'test-device' });
 
     // 下一次同步：本地没有 A，远程有 A → 应保持删除（不上传 A）

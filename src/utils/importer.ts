@@ -10,6 +10,7 @@ import { BookmarkInfo } from './models';
 import { logger } from './logger';
 import { BookmarkHubError, createError } from './errors';
 import { getBookmarkCount } from './bookmarkUtils';
+import { sanitizeBookmarkTitle, sanitizeBookmarkUrl, safeJsonParse } from './sanitize';
 
 /**
  * 导入格式类型
@@ -28,33 +29,6 @@ const MAX_IMPORT_SIZE = 10000;
  * 防止大文件导致的内存耗尽
  */
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-/**
- * 允许的 URL 协议白名单
- * 防止 javascript:, data:, vbscript: 等 XSS 协议
- */
-const ALLOWED_PROTOCOLS = ['http:', 'https:', 'ftp:', 'ftps:'];
-
-/**
- * 危险的 JSON 键名 - 用于检测原型污染攻击
- * 这些键名可能被用于污染 JavaScript 原型链
- */
-const DANGEROUS_JSON_KEYS = ['__proto__', 'constructor', 'prototype'];
-
-/**
- * 安全的 JSON 解析器 reviver 函数
- * 防止原型污染攻击
- * 
- * @param key - JSON 键名
- * @param value - JSON 值
- * @returns 值，如果键名危险则抛出错误
- */
-function safeReviver(key: string, value: unknown): unknown {
-    if (DANGEROUS_JSON_KEYS.includes(key)) {
-        throw createError.importError(`Dangerous key "${key}" detected in import data - potential prototype pollution attack`);
-    }
-    return value;
-}
 
 
 /**
@@ -108,44 +82,17 @@ function validateBookmarkStructure(bookmark: unknown, path: string = 'root'): Bo
 }
 
 /**
- * 清理标题字符串，移除HTML标签等恶意内容
+ * 清理标题字符串（共享实现见 sanitize.ts）
  */
 function sanitizeTitle(title: string): string {
-  if (!title || typeof title !== 'string') {
-    return '';
-  }
-
-  // 移除HTML标签
-  const stripped = title.replace(/<[^>]*>/g, '');
-
-  // 移除潜在的脚本内容  
-  let cleaned = stripped.replace(/(javascript:|vbscript:|data:)/gi, '');
-  
-  // 截断过长标题（限制在255字符内以防止过度消耗内存）
-  if (cleaned.length > 255) {
-    cleaned = cleaned.substring(0, 255);
-  }
-  
-  return cleaned.trim();
+  return sanitizeBookmarkTitle(title);
 }
 
 /**
- * 验证并清理URL，只允许安全协议
+ * 验证并清理URL（共享实现见 sanitize.ts）
  */
 function sanitizeUrl(url: string): string {
-  if (!url || typeof url !== 'string') {
-    return '';
-  }
-  
-  try {
-    const parsed = new URL(url);
-    if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
-      return '';
-    }
-    return url;
-  } catch {
-    return '';
-  }
+  return sanitizeBookmarkUrl(url);
 }
 
 /**
@@ -249,12 +196,12 @@ export async function importBookmarks(file: File): Promise<BookmarkInfo[]> {
  */
 function parseJsonBookmarks(content: string): BookmarkInfo[] {
     try {
-        // 解析 JSON
-        const data = JSON.parse(content, safeReviver);
+        // 解析 JSON（P1-11: 共享安全解析，含原型污染防护）
+        const data = safeJsonParse(content);
 
         // 验证并清理数据
         return validateAndSanitizeBookmarks(data);
-        
+
     } catch (error) {
         if (error instanceof BookmarkHubError) {
             // 已经是合适的错误格式
@@ -328,15 +275,18 @@ function parseDlElement(element: Element, parent: BookmarkInfo[]): void {
 
         // 只处理 DT 元素
         if (child.tagName === 'DT') {
-            // 查找 A 标签 (书签)
-            const a = child.querySelector('a');
+            // 查找直接子级 A 标签 (书签)
+            // 注意必须用 :scope > 限定直接子级：嵌套子 DL 中的锚点
+            // 会使整个文件夹被误判为单个书签（P1-8）
+            const a = child.querySelector(':scope > a');
 
-            // 查找 H3 标签 (文件夹)
-            const h3 = child.querySelector('h3');
+            // 查找直接子级 H3 标签 (文件夹)
+            const h3 = child.querySelector(':scope > h3');
 
             if (a) {
                 // 是书签 - P1-7: Sanitize URL to prevent XSS
-                const rawUrl = a.href;
+                // a.href 属性返回相对基准解析后的绝对 URL（getAttribute 只返回原始值）
+                const rawUrl = (a as HTMLAnchorElement).href;
                 const safeUrl = sanitizeUrl(rawUrl);
                 const bookmark: BookmarkInfo = {
                     id: "",

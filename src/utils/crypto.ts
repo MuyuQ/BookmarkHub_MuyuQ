@@ -14,6 +14,14 @@ const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
 
 /**
+ * 密文版本前缀 (P1-13)
+ * 所有新加密的数据都带此前缀，用于与明文/旧数据可靠区分。
+ * 此前 isEncrypted 依赖"能否 base64 解码"的启发式判断，
+ * 恰好是合法 base64 的明文凭证会被误判为密文 → 解密失败 → 凭证被当作空值。
+ */
+const ENCRYPTED_PREFIX = 'bhub:v1:';
+
+/**
  * 从密码派生加密密钥
  * 使用 PBKDF2 算法
  */
@@ -96,8 +104,8 @@ export async function encrypt(data: string, masterPassword?: string): Promise<st
   combined.set(salt, 0);
   combined.set(iv, salt.length);
   combined.set(new Uint8Array(encrypted), salt.length + iv.length);
-  
-  return btoa(String.fromCharCode(...combined));
+
+  return ENCRYPTED_PREFIX + btoa(String.fromCharCode(...combined));
 }
 
 /**
@@ -110,10 +118,15 @@ export async function encrypt(data: string, masterPassword?: string): Promise<st
  */
 export async function decrypt(encryptedData: string, masterPassword?: string): Promise<string> {
   if (!encryptedData) return '';
-  
+
   try {
+    // P1-13: 去掉版本前缀后解密（不带前缀的旧数据按原格式兼容处理）
+    const raw = encryptedData.startsWith(ENCRYPTED_PREFIX)
+      ? encryptedData.slice(ENCRYPTED_PREFIX.length)
+      : encryptedData;
+
     const combined = new Uint8Array(
-      atob(encryptedData).split('').map(c => c.charCodeAt(0))
+      atob(raw).split('').map(c => c.charCodeAt(0))
     );
     
     const salt = combined.slice(0, SALT_LENGTH);
@@ -141,11 +154,15 @@ export async function decrypt(encryptedData: string, masterPassword?: string): P
 
 /**
  * 检查数据是否已加密
- * 通过尝试解码来验证格式
+ * 优先识别版本前缀（可靠）；不带前缀的历史密文回退到 base64 启发式
  */
 export function isEncrypted(data: string): boolean {
   if (!data) return false;
-  
+
+  if (data.startsWith(ENCRYPTED_PREFIX)) {
+    return true;
+  }
+
   try {
     const decoded = atob(data);
     return decoded.length > SALT_LENGTH + IV_LENGTH;

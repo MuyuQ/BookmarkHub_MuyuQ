@@ -9,6 +9,7 @@
 import { Setting } from './setting';
 import { retryOperation } from './retry';
 import { logger } from './logger';
+import { HTTP_TIMEOUTS } from './constants';
 
 /**
  * 危险路径模式 - 用于检测路径遍历攻击
@@ -105,9 +106,29 @@ export class WebDAVClient {
 
         // 移除末尾的斜杠
         this.baseUrl = baseUrl.replace(/\/$/, '');
+        // P1-12: 允许 http:// 以兼容内网 NAS 场景，但必须明确警告明文传输风险
+        if (this.baseUrl.startsWith('http://')) {
+            logger.warn('WebDAVClient: 正在使用明文 HTTP 连接，Basic Auth 凭证将以 Base64 明文传输，建议改用 HTTPS', {
+                host: new URL(this.baseUrl).hostname,
+            });
+        }
         // 立即生成认证头，不存储密码（安全考虑）
         this.authHeader = this.createAuthHeader(username, password);
         this.contentType = contentType;
+    }
+
+    /**
+     * 带超时的 fetch (P1-12)
+     * 此前所有 WebDAV 请求均无超时控制，服务器无响应时请求会无限挂起
+     */
+    private async fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), HTTP_TIMEOUTS.WEBDAV);
+        try {
+            return await fetch(url, { ...init, signal: controller.signal });
+        } finally {
+            clearTimeout(timer);
+        }
     }
 
     /**
@@ -147,7 +168,7 @@ export class WebDAVClient {
     async read(path: string): Promise<string | null> {
         try {
             return await retryOperation(async () => {
-                const response = await fetch(`${this.baseUrl}${sanitizePath(path)}`, {
+                const response = await this.fetchWithTimeout(`${this.baseUrl}${sanitizePath(path)}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': this.getAuthHeader()
@@ -179,7 +200,7 @@ export class WebDAVClient {
     async write(path: string, content: string, contentType?: string): Promise<boolean> {
         try {
             return await retryOperation(async () => {
-                const response = await fetch(`${this.baseUrl}${sanitizePath(path)}`, {
+                const response = await this.fetchWithTimeout(`${this.baseUrl}${sanitizePath(path)}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': this.getAuthHeader(),
@@ -210,7 +231,7 @@ export class WebDAVClient {
     async exists(path: string): Promise<boolean> {
         try {
             // 发送 HEAD 请求
-            const response = await fetch(`${this.baseUrl}${sanitizePath(path)}`, {
+            const response = await this.fetchWithTimeout(`${this.baseUrl}${sanitizePath(path)}`, {
                 method: 'HEAD',
                 headers: {
                     'Authorization': this.getAuthHeader()
@@ -245,7 +266,7 @@ export class WebDAVClient {
     async remove(path: string): Promise<boolean> {
         try {
             return await retryOperation(async () => {
-                const response = await fetch(`${this.baseUrl}${sanitizePath(path)}`, {
+                const response = await this.fetchWithTimeout(`${this.baseUrl}${sanitizePath(path)}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': this.getAuthHeader()

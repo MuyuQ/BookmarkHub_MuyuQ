@@ -109,7 +109,20 @@ export class BookmarkHubError extends Error {
   /**
    * 转换为显示给用户的字符串
    */
+  /**
+   * 面向用户的本地化消息 (P2-11)
+   * 优先使用 i18n 键 error_<ErrorCode>（随浏览器语言显示），
+   * 键缺失或 i18n 不可用时回退到内置的 userMessage
+   */
   toUserString(): string {
+    try {
+      const key = `error_${this.code}` as Parameters<typeof browser.i18n.getMessage>[0];
+      const localized = browser.i18n.getMessage(key);
+      // 返回值等于键名时视为缺失（某些环境会原样返回键）
+      if (localized && localized !== key) return localized;
+    } catch {
+      // i18n API 不可用（如测试环境）时回退
+    }
     return this.userMessage;
   }
 }

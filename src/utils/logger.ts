@@ -119,27 +119,27 @@ export const logger = {
 
 // 专用模块日志
 export const logSync = {
-  start: () => logger.info('开始同步'),
-  success: (count: number) => logger.info(`同步成功，共 ${count} 个书签`),
-  failed: (error: string) => logger.error(`同步失败: ${error}`),
-  skipped: (reason: string) => logger.warn(`同步跳过: ${reason}`),
+  start: () => logger.info('Sync started'),
+  success: (count: number) => logger.info(`Sync succeeded with ${count} bookmarks`),
+  failed: (error: string) => logger.error(`Sync failed: ${error}`),
+  skipped: (reason: string) => logger.warn(`Sync skipped: ${reason}`),
 };
 
 export const logBookmarks = {
-  upload: (count: number) => logger.info(`上传 ${count} 个书签`),
-  download: (count: number) => logger.info(`下载 ${count} 个书签`),
-  clear: () => logger.info('清空本地书签'),
-  create: (count: number) => logger.info(`创建 ${count} 个书签`),
+  upload: (count: number) => logger.info(`Uploaded ${count} bookmarks`),
+  download: (count: number) => logger.info(`Downloaded ${count} bookmarks`),
+  clear: () => logger.info('Cleared local bookmarks'),
+  create: (count: number) => logger.info(`Created ${count} bookmarks`),
 };
 
 export const logWebDAV = {
-  read: (success: boolean) => logger.info(`WebDAV 读取${success ? '成功' : '失败'}`),
-  write: (success: boolean) => logger.info(`WebDAV 写入${success ? '成功' : '失败'}`),
-  test: (success: boolean) => logger.info(`WebDAV 连接测试${success ? '成功' : '失败'}`),
+  read: (success: boolean) => logger.info(`WebDAV read ${success ? 'succeeded' : 'failed'}`),
+  write: (success: boolean) => logger.info(`WebDAV write ${success ? 'succeeded' : 'failed'}`),
+  test: (success: boolean) => logger.info(`WebDAV connection test ${success ? 'succeeded' : 'failed'}`),
 };
 
 export const logSettings = {
-  loaded: () => logger.debug('设置已加载'),
-  saved: () => logger.debug('设置已保存'),
-  changed: (key: string) => logger.debug(`设置变更: ${key}`),
+  loaded: () => logger.debug('Settings loaded'),
+  saved: () => logger.debug('Settings saved'),
+  changed: (key: string) => logger.debug(`Setting changed: ${key}`),
 };

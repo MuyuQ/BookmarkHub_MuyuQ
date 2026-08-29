@@ -5,7 +5,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './options.css'
 import { getAllDecrypted, setEncrypted } from '../../utils/optionsStorage'
 import { testWebDAVConnection } from '../../utils/webdav'
-import { MESSAGE_NAMES } from '../../utils/constants'
+import { MESSAGE_NAMES, WEBDAV_DEFAULTS } from '../../utils/constants'
+import BookmarkService from '../../utils/services'
 import { BackupRecord } from '../../utils/models'
 
 const Options: React.FC = () => {
@@ -24,11 +25,13 @@ const Options: React.FC = () => {
     const [webdavUrl, setWebdavUrl] = useState('');
     const [webdavUsername, setWebdavUsername] = useState('');
     const [webdavPassword, setWebdavPassword] = useState('');
-    const [webdavPath, setWebdavPath] = useState('/bookmarks.json');
+    const [webdavPath, setWebdavPath] = useState<string>(WEBDAV_DEFAULTS.PATH);
     const [masterPassword, setMasterPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPasswordWarning, setShowPasswordWarning] = useState(false);
     const [testingConnection, setTestingConnection] = useState(false);
+    const [testingGithub, setTestingGithub] = useState(false);
+    const [githubStatus, setGithubStatus] = useState<{ ok: boolean; message: string } | null>(null);
     const [connectionStatus, setConnectionStatus] = useState<{ success: boolean; message: string } | null>(null);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -69,11 +72,21 @@ const Options: React.FC = () => {
         }
     };
     
-    const handleDeleteBackup = async (timestamp: number) => {
-        if (confirm(browser.i18n.getMessage('confirmDeleteBackup') || 'Delete this backup?')) {
-            await browser.runtime.sendMessage({ name: MESSAGE_NAMES.DELETE_BACKUP_RECORD, timestamp });
-            loadBackupRecords();
-        }
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteTimestamp, setDeleteTimestamp] = useState<number | null>(null);
+
+    const handleDeleteBackup = (timestamp: number) => {
+        // P2-7: 原生 confirm() 与页面 React Modal 风格统一
+        setDeleteTimestamp(timestamp);
+        setShowDeleteModal(true);
+    };
+
+    const confirmDelete = async () => {
+        if (deleteTimestamp === null) return;
+        await browser.runtime.sendMessage({ name: MESSAGE_NAMES.DELETE_BACKUP_RECORD, timestamp: deleteTimestamp });
+        setShowDeleteModal(false);
+        setDeleteTimestamp(null);
+        loadBackupRecords();
     };
     
     const formatDate = (timestamp: number) => {
@@ -86,7 +99,16 @@ const Options: React.FC = () => {
             if (!githubToken || githubToken.trim() === '') errors.push(browser.i18n.getMessage('githubTokenRequired'));
             if (!gistID || gistID.trim() === '') errors.push(browser.i18n.getMessage('gistIdRequired'));
         } else if (storageType === 'webdav') {
-            if (!webdavUrl || webdavUrl.trim() === '') errors.push(browser.i18n.getMessage('webdavUrlRequired'));
+            if (!webdavUrl || webdavUrl.trim() === '') {
+                errors.push(browser.i18n.getMessage('webdavUrlRequired'));
+            } else {
+                try {
+                    const parsed = new URL(webdavUrl);
+                    if (!parsed.protocol.startsWith('http')) throw new Error('bad protocol');
+                } catch {
+                    errors.push(browser.i18n.getMessage('webdavUrlInvalid'));
+                }
+            }
             if (!webdavUsername || webdavUsername.trim() === '') errors.push(browser.i18n.getMessage('webdavUsernameRequired'));
             if (!webdavPassword || webdavPassword.trim() === '') errors.push(browser.i18n.getMessage('webdavPasswordRequired'));
         }
@@ -109,7 +131,7 @@ const Options: React.FC = () => {
             setWebdavUrl(options.webdavUrl as string || '');
             setWebdavUsername(options.webdavUsername as string || '');
             setWebdavPassword(options.webdavPassword as string || '');
-            setWebdavPath(options.webdavPath as string || '/bookmarks.json');
+            setWebdavPath(options.webdavPath as string || WEBDAV_DEFAULTS.PATH);
         };
         loadSettings();
     }, []);
@@ -180,6 +202,24 @@ const Options: React.FC = () => {
         }
     };
     
+    // P2-7: GitHub Token/Gist 连通性测试（此前仅 WebDAV 有测试能力）
+    const handleTestGithub = async () => {
+        if (!githubToken.trim() || !gistID.trim()) {
+            setGithubStatus({ ok: false, message: browser.i18n.getMessage('githubTokenRequired') || 'Token and Gist ID are required' });
+            return;
+        }
+        setTestingGithub(true);
+        setGithubStatus(null);
+        try {
+            await BookmarkService.testConnection();
+            setGithubStatus({ ok: true, message: browser.i18n.getMessage('githubConnectionOk') || 'OK' });
+        } catch (error) {
+            setGithubStatus({ ok: false, message: `${browser.i18n.getMessage('githubConnectionFailed') || 'Failed'}: ${(error as Error).message}` });
+        } finally {
+            setTestingGithub(false);
+        }
+    };
+
     const handleTestWebDAV = async () => {
         setTestingConnection(true);
         setConnectionStatus(null);
@@ -397,6 +437,23 @@ const Options: React.FC = () => {
                             {browser.i18n.getMessage('restore') || 'Restore'}
                         </Button>
                     )}
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{browser.i18n.getMessage('delete') || 'Delete'}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>{browser.i18n.getMessage('confirmDeleteBackup') || 'Delete this backup?'}</p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+                        {browser.i18n.getMessage('cancel') || 'Cancel'}
+                    </Button>
+                    <Button variant="danger" onClick={confirmDelete}>
+                        {browser.i18n.getMessage('delete') || 'Delete'}
+                    </Button>
                 </Modal.Footer>
             </Modal>
         </Container>

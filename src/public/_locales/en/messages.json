@@ -518,5 +518,57 @@
     "webdavPermissionDenied": {
         "message": "WebDAV host permission was denied. The extension cannot access the WebDAV server without it.",
         "description": "Shown when the user denies the WebDAV origin permission request"
+    },
+    "syncNow": {
+        "message": "Smart Sync (merge)",
+        "description": "Popup menu item that runs the three-way merge sync"
+    },
+    "syncNowDesc": {
+        "message": "Merge local and remote bookmark changes",
+        "description": "Tooltip for the Smart Sync menu item"
+    },
+    "syncRunning": {
+        "message": "Syncing…",
+        "description": "Shown in the popup footer while a sync is running"
+    },
+    "syncDone": {
+        "message": "Sync completed",
+        "description": "Shown after a successful sync"
+    },
+    "syncFailedLabel": {
+        "message": "Sync failed",
+        "description": "Shown after a failed sync"
+    },
+    "syncSkipped": {
+        "message": "Sync skipped (already running)",
+        "description": "Shown when a sync was skipped"
+    },
+    "syncConflicts": {
+        "message": "conflicts resolved",
+        "description": "Appended to sync result when conflicts were auto-resolved"
+    },
+    "confirmDownload": {
+        "message": "Downloading will CLEAR all local bookmarks and rebuild from the remote copy. Continue?",
+        "description": "Confirmation before the destructive download action"
+    },
+    "lastSyncLabel": {
+        "message": "Last sync",
+        "description": "Label for the last sync time in the footer"
+    },
+    "testGithubConnection": {
+        "message": "Test GitHub Connection",
+        "description": "Button to verify GitHub token and gist access"
+    },
+    "githubConnectionOk": {
+        "message": "GitHub connection OK",
+        "description": "GitHub connectivity test succeeded"
+    },
+    "githubConnectionFailed": {
+        "message": "GitHub connection failed",
+        "description": "GitHub connectivity test failed"
+    },
+    "webdavUrlInvalid": {
+        "message": "WebDAV URL must be a valid absolute URL (e.g. https://host/dav/)",
+        "description": "WebDAV URL format validation error"
     }
 }

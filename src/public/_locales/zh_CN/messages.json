@@ -390,5 +390,57 @@
     "webdavPermissionDenied": {
         "message": "WebDAV 主机权限被拒绝，扩展无法访问该 WebDAV 服务器。",
         "description": "用户拒绝 WebDAV origin 权限请求时显示"
+    },
+    "syncNow": {
+        "message": "智能同步（合并）",
+        "description": "弹窗菜单项：执行三向合并同步"
+    },
+    "syncNowDesc": {
+        "message": "合并本地与远程的书签变更",
+        "description": "智能同步菜单项提示"
+    },
+    "syncRunning": {
+        "message": "同步中…",
+        "description": "同步进行时在弹窗底部显示"
+    },
+    "syncDone": {
+        "message": "同步完成",
+        "description": "同步成功后显示"
+    },
+    "syncFailedLabel": {
+        "message": "同步失败",
+        "description": "同步失败后显示"
+    },
+    "syncSkipped": {
+        "message": "已跳过（同步进行中）",
+        "description": "同步被跳过时显示"
+    },
+    "syncConflicts": {
+        "message": "个冲突已按规则处理",
+        "description": "同步结果中自动解决的冲突数量后缀"
+    },
+    "confirmDownload": {
+        "message": "下载将清空本地全部书签并以远程数据重建，确定继续吗？",
+        "description": "破坏性下载操作前的确认"
+    },
+    "lastSyncLabel": {
+        "message": "上次同步",
+        "description": "弹窗底部上次同步时间标签"
+    },
+    "testGithubConnection": {
+        "message": "测试 GitHub 连接",
+        "description": "验证 GitHub Token 与 Gist 可达性的按钮"
+    },
+    "githubConnectionOk": {
+        "message": "GitHub 连接正常",
+        "description": "GitHub 连通性测试通过"
+    },
+    "githubConnectionFailed": {
+        "message": "GitHub 连接失败",
+        "description": "GitHub 连通性测试失败"
+    },
+    "webdavUrlInvalid": {
+        "message": "WebDAV 地址必须是有效的完整 URL（如 https://host/dav/）",
+        "description": "WebDAV URL 格式校验错误"
     }
 }

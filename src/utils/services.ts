@@ -187,6 +187,20 @@ class BookmarkService {
     }
 
     /**
+     * 测试 GitHub Token 与 Gist 的连通性 (P2-7)
+     * 仅验证能用该 token 访问到该 gist，不要求目标文件存在
+     *
+     * @throws 连接失败/认证失败/ID 无效时抛出
+     */
+    async testConnection(): Promise<void> {
+        const setting = await Setting.build();
+        if (!validateGistId(setting.gistID)) {
+            throw new Error(`Invalid Gist ID format: ${setting.gistID}. Gist IDs must be 32 or 40 character hexadecimal strings.`);
+        }
+        await http.get(`gists/${setting.gistID}`).json();
+    }
+
+    /**
      * 更新远程 Gist 中的书签数据
      *
      * @param data - 要更新的数据对象

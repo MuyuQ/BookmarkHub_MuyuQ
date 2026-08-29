@@ -139,7 +139,7 @@ function executeCallbacks(eventType: BookmarkEventType, id: string, info: unknow
  */
 const syncListeners = {
   onStartup: () => {
-    logger.info('>>> syncListeners.onStartup 触发');
+    logger.debug('>>> syncListeners.onStartup 触发');
     logger.info(`onStartup: isSuppressingEvents=${isSuppressingEvents}`);
     if (!isSuppressingEvents) {
       logger.info('onStartup: 调用 syncDebouncer.triggerSync()');
@@ -149,7 +149,7 @@ const syncListeners = {
     }
   },
   onCreated: (id: string, bookmark: Bookmarks.BookmarkTreeNode) => {
-    logger.info('>>> syncListeners.onCreated 触发', { id, title: bookmark.title, url: bookmark.url });
+    logger.debug('>>> syncListeners.onCreated 触发', { id, title: bookmark.title, url: bookmark.url });
     logger.info(`onCreated: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
     if (!isSuppressingEvents) {
       logger.info('onCreated: 调用 syncDebouncer.triggerSync()');
@@ -160,7 +160,7 @@ const syncListeners = {
     }
   },
   onChanged: (id: string, changeInfo: Bookmarks.OnChangedChangeInfoType) => {
-    logger.info('>>> syncListeners.onChanged 触发', { id, changeInfo });
+    logger.debug('>>> syncListeners.onChanged 触发', { id, changeInfo });
     logger.info(`onChanged: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
     if (!isSuppressingEvents) {
       logger.info('onChanged: 调用 syncDebouncer.triggerSync()');
@@ -171,7 +171,7 @@ const syncListeners = {
     }
   },
   onMoved: (id: string, moveInfo: Bookmarks.OnMovedMoveInfoType) => {
-    logger.info('>>> syncListeners.onMoved 触发', { id, moveInfo });
+    logger.debug('>>> syncListeners.onMoved 触发', { id, moveInfo });
     logger.info(`onMoved: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
     if (!isSuppressingEvents) {
       logger.info('onMoved: 调用 syncDebouncer.triggerSync()');
@@ -182,7 +182,7 @@ const syncListeners = {
     }
   },
   onRemoved: (id: string, removeInfo: Bookmarks.OnRemovedRemoveInfoType) => {
-    logger.info('>>> syncListeners.onRemoved 触发', { id, removeInfo });
+    logger.debug('>>> syncListeners.onRemoved 触发', { id, removeInfo });
     logger.info(`onRemoved: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
     if (!isSuppressingEvents) {
       logger.info('onRemoved: 调用 syncDebouncer.triggerSync()');
@@ -268,10 +268,9 @@ export async function startAutoSync(): Promise<void> {
 
     // 获取设置
     const setting = await Setting.build();
-    
-    // ========== 诊断日志 START ==========
-    logger.info('========== startAutoSync 被调用 ==========');
-    logger.info('startAutoSync: 设置状态', {
+
+    logger.debug('========== startAutoSync 被调用 ==========');
+    logger.debug('startAutoSync: 设置状态', {
         enableAutoSync: setting.enableAutoSync,
         enableIntervalSync: setting.enableIntervalSync,
         enableEventSync: setting.enableEventSync,
@@ -280,8 +279,7 @@ export async function startAutoSync(): Promise<void> {
         isSyncing,
         isSuppressingEvents
     });
-    // ========== 诊断日志 END ==========
-    
+
     // 如果未启用自动同步，直接返回
     if (!setting.enableAutoSync) {
         logger.info('startAutoSync: 自动同步未启用，直接返回');
@@ -345,7 +343,7 @@ export async function startAutoSync(): Promise<void> {
         logger.info('startAutoSync: 监听器已注册，跳过重复注册');
     }
     
-    logger.info('========== startAutoSync 完成 ==========');
+    logger.debug('========== startAutoSync 完成 ==========');
 }
 
 /**
@@ -355,7 +353,7 @@ export async function startAutoSync(): Promise<void> {
  * @see startAutoSync 启动自动同步
  */
 export function stopAutoSync(): void {
-    logger.info('========== stopAutoSync 被调用 ==========');
+    logger.debug('========== stopAutoSync 被调用 ==========');
     logger.info(`stopAutoSync: listenersRegistered=${listenersRegistered}`);
     
     // 清除 Alarm (MV3 兼容)
@@ -380,7 +378,7 @@ export function stopAutoSync(): void {
         listenersRegistered = false;
         logger.info('stopAutoSync: 所有事件监听器已移除');
     }
-    logger.info('========== stopAutoSync 完成 ==========');
+    logger.debug('========== stopAutoSync 完成 ==========');
 }
 
 /**
@@ -419,7 +417,7 @@ async function checkPersistentSyncLock(): Promise<boolean> {
  * @returns Promise<SyncResult> 同步结果
  */
 export async function performSync(): Promise<SyncResult> {
-    logger.info('========== performSync 开始 ==========');
+    logger.debug('========== performSync 开始 ==========');
     logger.info(`performSync: isSyncing=${isSyncing}, isSuppressingEvents=${isSuppressingEvents}`);
 
     // 恢复持久化状态 (MV3 Service Worker 休眠恢复)
@@ -471,7 +469,7 @@ export async function performSync(): Promise<SyncResult> {
     
     try {
         // 1. 获取设置
-        logger.info('performSync: 步骤1 - 获取设置...');
+        logger.debug('performSync: 步骤1 - 获取设置...');
         const setting = await Setting.build();
         logger.info('performSync: 设置获取成功', {
             storageType: setting.storageType,
@@ -482,13 +480,13 @@ export async function performSync(): Promise<SyncResult> {
         });
         
         // 2. 获取本地书签
-        logger.info('performSync: 步骤2 - 获取本地书签...');
+        logger.debug('performSync: 步骤2 - 获取本地书签...');
         const localBookmarks = await getBookmarks();
         const localCount = getBookmarkCount(localBookmarks);
         logger.info(`performSync: 本地书签获取成功，共 ${localCount} 个`);
         
         // 3. 获取远程数据
-        logger.info('performSync: 步骤3 - 获取远程数据...');
+        logger.debug('performSync: 步骤3 - 获取远程数据...');
         const remoteData = await _fetchRemoteData(setting);
         let remoteBookmarks: BookmarkInfo[] = [];
         if (remoteData) {
@@ -498,7 +496,7 @@ export async function performSync(): Promise<SyncResult> {
         logger.info(`performSync: 远程数据获取成功，共 ${remoteCount} 个书签`, { hasRemoteData: !!remoteData });
         
         // 4. 标准化 ID - 确保本地和远程使用相同的稳定 ID
-        logger.info('performSync: 步骤4 - 标准化书签ID...');
+        logger.debug('performSync: 步骤4 - 标准化书签ID...');
         normalizeBookmarkIds(localBookmarks);
         logger.info('performSync: 本地书签ID标准化完成');
         if (remoteBookmarks) {
@@ -507,7 +505,7 @@ export async function performSync(): Promise<SyncResult> {
         }
         
         // 5. 获取本地缓存作为基准点（baseline）
-        logger.info('performSync: 步骤5 - 获取本地缓存作为基准点...');
+        logger.debug('performSync: 步骤5 - 获取本地缓存作为基准点...');
         const localCache = await getLocalCache();
         const baseline = localCache?.backupRecords?.[0]?.bookmarkData || null;
         const localTombstones = localCache?.tombstones || [];
@@ -524,7 +522,7 @@ export async function performSync(): Promise<SyncResult> {
         logger.info('performSync: 远程墓碑提取完成', { remoteTombstones: remoteTombstones.length });
 
         // 7. 执行三向合并
-        logger.info('performSync: 步骤7 - 执行三向合并...');
+        logger.debug('performSync: 步骤7 - 执行三向合并...');
         const mergeResult = threeWayMerge({
             baseline,
             local: localBookmarks,
@@ -543,15 +541,15 @@ export async function performSync(): Promise<SyncResult> {
 
         // 8. 如果有变更，上传合并后的数据
         if (mergeResult.hasChanges) {
-            logger.info('performSync: 步骤8 - 有变更，上传合并后的数据...');
+            logger.debug('performSync: 步骤8 - 有变更，上传合并后的数据...');
             await uploadBookmarks(mergeResult.merged, mergeResult.tombstones);
             logger.info('performSync: 上传完成');
         } else {
-            logger.info('performSync: 步骤8 - 无变更，跳过上传');
+            logger.debug('performSync: 步骤8 - 无变更，跳过上传');
         }
 
         // 9. 更新本地缓存为新基准点
-        logger.info('performSync: 步骤9 - 更新本地缓存为新基准点...');
+        logger.debug('performSync: 步骤9 - 更新本地缓存为新基准点...');
         const newCache: SyncData = {
             version: '2.0',
             lastSyncTimestamp: Date.now(),
@@ -574,15 +572,15 @@ export async function performSync(): Promise<SyncResult> {
         result.localCount = localCount;
         result.remoteCount = getBookmarkCount(mergeResult.merged);
         result.conflictCount = mergeResult.conflicts.length;
-        logger.info('performSync: 步骤10 - 设置成功状态', result);
+        logger.debug('performSync: 步骤10 - 设置成功状态', result);
 
         // 11. 保存同步状态
-        logger.info('performSync: 步骤11 - 保存同步状态...');
+        logger.debug('performSync: 步骤11 - 保存同步状态...');
         await saveSyncStatus(result);
         logger.info('performSync: 同步状态保存完成');
 
         // 12. 通知 popup 刷新数量显示
-        logger.info('performSync: 步骤12 - 通知 popup 刷新...');
+        logger.debug('performSync: 步骤12 - 通知 popup 刷新...');
         try {
             await browser.runtime.sendMessage({ name: 'refreshCounts' });
             logger.info('performSync: popup 通知发送成功');
@@ -591,7 +589,7 @@ export async function performSync(): Promise<SyncResult> {
         }
 
         logSync.success(result.remoteCount);
-        logger.info('========== performSync 成功完成 ==========');
+        logger.debug('========== performSync 成功完成 ==========');
         
     } catch (error: unknown) {
         // 捕获并记录错误
@@ -599,7 +597,6 @@ export async function performSync(): Promise<SyncResult> {
         const err = handleError(error);
         result.errorMessage = err.message;
         logSync.failed(err.toLogString());
-        logger.error('========== performSync 失败 ==========');
     } finally {
         // 释放同步锁和事件抑制标志
         isSyncing = false;
@@ -623,11 +620,11 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
     const setting = await Setting.build();
 
     // 步骤1: 获取现有远程数据
-    logger.info('uploadBookmarks: 步骤1 - 获取现有远程数据...');
+    logger.debug('uploadBookmarks: 步骤1 - 获取现有远程数据...');
     const existingData = await _fetchRemoteData(setting);
 
     // 步骤2: 创建新的备份记录
-    logger.info('uploadBookmarks: 步骤2 - 创建新的备份记录...');
+    logger.debug('uploadBookmarks: 步骤2 - 创建新的备份记录...');
     const newRecord: BackupRecord = {
         backupTimestamp: Date.now(),
         bookmarkData: bookmarks,
@@ -635,7 +632,7 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
     };
 
     // 步骤3: 构建 v2.0 格式的数据
-    logger.info('uploadBookmarks: 步骤3 - 构建 v2.0 格式数据...');
+    logger.debug('uploadBookmarks: 步骤3 - 构建 v2.0 格式数据...');
     const uploadData: SyncData = {
         version: '2.0',
         lastSyncTimestamp: Date.now(),
@@ -676,7 +673,7 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
     
     // 序列化为 JSON
     const content = JSON.stringify(uploadData, null, 2);
-    logger.info(`uploadBookmarks: 步骤6 - 上传数据 (${getBookmarkCount(bookmarks)} 个书签)...`);
+    logger.debug(`uploadBookmarks: 步骤6 - 上传数据 (${getBookmarkCount(bookmarks)} 个书签)...`);
     
     // 步骤6: 根据存储类型选择上传方式
     if (setting.storageType === 'webdav') {

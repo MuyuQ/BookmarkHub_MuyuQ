@@ -118,5 +118,565 @@
     "saveSettings": {
         "message": "Salvar Configurações",
         "description": ""
+    },
+    "autoSync": {
+        "message": "Sincronização automática",
+        "description": ""
+    },
+    "syncInterval": {
+        "message": "Intervalo de sincronização",
+        "description": ""
+    },
+    "syncMode": {
+        "message": "Modo de sincronização",
+        "description": ""
+    },
+    "conflictMode": {
+        "message": "Modo de conflito",
+        "description": ""
+    },
+    "storageType": {
+        "message": "Tipo",
+        "description": ""
+    },
+    "webdav": {
+        "message": "WebDAV",
+        "description": ""
+    },
+    "syncConflict": {
+        "message": "Conflito de sincronização",
+        "description": ""
+    },
+    "conflictsDetected": {
+        "message": "conflitos detectados",
+        "description": ""
+    },
+    "export": {
+        "message": "Exportar",
+        "description": ""
+    },
+    "import": {
+        "message": "Importar",
+        "description": ""
+    },
+    "githubGist": {
+        "message": "GitHub Gist",
+        "description": ""
+    },
+    "getToken": {
+        "message": "Obter token",
+        "description": ""
+    },
+    "enableAutoSync": {
+        "message": "Ativar sincronização automática",
+        "description": ""
+    },
+    "syncModeTimer": {
+        "message": "Temporizador",
+        "description": ""
+    },
+    "syncModeEvent": {
+        "message": "Evento",
+        "description": ""
+    },
+    "syncModeHybrid": {
+        "message": "Híbrido",
+        "description": ""
+    },
+    "interval15": {
+        "message": "15 minutos",
+        "description": ""
+    },
+    "interval30": {
+        "message": "30 minutos",
+        "description": ""
+    },
+    "interval60": {
+        "message": "1 hora",
+        "description": ""
+    },
+    "interval360": {
+        "message": "6 horas",
+        "description": ""
+    },
+    "interval1440": {
+        "message": "24 horas",
+        "description": ""
+    },
+    "conflictAuto": {
+        "message": "Combinação automática",
+        "description": ""
+    },
+    "conflictPrompt": {
+        "message": "Perguntar-me",
+        "description": ""
+    },
+    "storageService": {
+        "message": "Serviço de armazenamento",
+        "description": ""
+    },
+    "webdavUrl": {
+        "message": "URL do WebDAV",
+        "description": ""
+    },
+    "webdavUsername": {
+        "message": "Usuário do WebDAV",
+        "description": ""
+    },
+    "webdavPassword": {
+        "message": "Senha do WebDAV",
+        "description": ""
+    },
+    "webdavPath": {
+        "message": "Caminho do WebDAV",
+        "description": ""
+    },
+    "testWebDAVConnection": {
+        "message": "Testar conexão WebDAV",
+        "description": ""
+    },
+    "testing": {
+        "message": "Testando...",
+        "description": ""
+    },
+    "exportBookmarks": {
+        "message": "Exportar favoritos",
+        "description": ""
+    },
+    "importBookmarks": {
+        "message": "Importar favoritos",
+        "description": ""
+    },
+    "intervalSync": {
+        "message": "Sincronização por timer",
+        "description": ""
+    },
+    "intervalSyncDesc": {
+        "message": "Sincroniza automaticamente os favoritos nos intervalos definidos",
+        "description": ""
+    },
+    "eventSync": {
+        "message": "Sincronização por evento",
+        "description": ""
+    },
+    "eventSyncDesc": {
+        "message": "Sincroniza ao iniciar o navegador ou quando os favoritos mudarem (criar/modificar/excluir)",
+        "description": ""
+    },
+    "interval720": {
+        "message": "12 horas",
+        "description": ""
+    },
+    "local": {
+        "message": "Local",
+        "description": "Local bookmarks label"
+    },
+    "remote": {
+        "message": "Remoto",
+        "description": "Remote bookmarks label"
+    },
+    "validationError": {
+        "message": "Erro de validação",
+        "description": "Validation error header"
+    },
+    "githubTokenRequired": {
+        "message": "O token do GitHub não pode estar vazio",
+        "description": ""
+    },
+    "gistIdRequired": {
+        "message": "O ID do Gist não pode estar vazio",
+        "description": ""
+    },
+    "webdavUrlRequired": {
+        "message": "A URL do WebDAV não pode estar vazia",
+        "description": ""
+    },
+    "webdavUsernameRequired": {
+        "message": "O usuário do WebDAV não pode estar vazio",
+        "description": ""
+    },
+    "webdavPasswordRequired": {
+        "message": "A senha do WebDAV não pode estar vazia",
+        "description": ""
+    },
+    "backupManagement": {
+        "message": "Gerenciamento de backups",
+        "description": ""
+    },
+    "enableAutoBackup": {
+        "message": "Ativar backup automático",
+        "description": ""
+    },
+    "maxBackups": {
+        "message": "Máximo de backups",
+        "description": ""
+    },
+    "refreshBackupList": {
+        "message": "Atualizar lista de backups",
+        "description": ""
+    },
+    "backupDate": {
+        "message": "Data do backup",
+        "description": ""
+    },
+    "bookmarkCount": {
+        "message": "Favoritos",
+        "description": ""
+    },
+    "fileSize": {
+        "message": "Tamanho",
+        "description": ""
+    },
+    "actions": {
+        "message": "Ações",
+        "description": ""
+    },
+    "restore": {
+        "message": "Restaurar",
+        "description": ""
+    },
+    "download": {
+        "message": "Baixar",
+        "description": ""
+    },
+    "delete": {
+        "message": "Excluir",
+        "description": ""
+    },
+    "noBackups": {
+        "message": "Nenhum backup encontrado",
+        "description": ""
+    },
+    "confirmRestore": {
+        "message": "Confirmar restauração",
+        "description": ""
+    },
+    "confirmRestoreDesc": {
+        "message": "Tem certeza de que deseja restaurar os favoritos do backup selecionado? Os favoritos atuais serão substituídos.",
+        "description": ""
+    },
+    "cancel": {
+        "message": "Cancelar",
+        "description": ""
+    },
+    "confirmRestoreButton": {
+        "message": "Confirmar restauração",
+        "description": ""
+    },
+    "backupHistory": {
+        "message": "Histórico de backups",
+        "description": ""
+    },
+    "localCache": {
+        "message": "Cache local",
+        "description": ""
+    },
+    "current": {
+        "message": "Atual",
+        "description": ""
+    },
+    "backupSource": {
+        "message": "Origem",
+        "description": ""
+    },
+    "backupTime": {
+        "message": "Horário do backup",
+        "description": ""
+    },
+    "debounceTime": {
+        "message": "Tempo de debounce (ms)",
+        "description": ""
+    },
+    "restoreSuccess": {
+        "message": "Backup restaurado com sucesso",
+        "description": ""
+    },
+    "importSuccess": {
+        "message": "$COUNT$ favoritos importados com sucesso",
+        "description": "Success message for import",
+        "placeholders": {
+            "COUNT": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "importFailed": {
+        "message": "Falha ao importar favoritos: $ERROR$",
+        "description": "Error message for import failure",
+        "placeholders": {
+            "ERROR": {
+                "content": "$1",
+                "example": "Invalid file format"
+            }
+        }
+    },
+    "webdavFieldsRequired": {
+        "message": "Preencha todos os campos do WebDAV",
+        "description": ""
+    },
+    "loading": {
+        "message": "Carregando...",
+        "description": ""
+    },
+    "loadingBackupData": {
+        "message": "Carregando dados do backup...",
+        "description": ""
+    },
+    "failedToLoadBackupData": {
+        "message": "Falha ao carregar dados do backup",
+        "description": ""
+    },
+    "failedToRestoreBackup": {
+        "message": "Falha ao restaurar o backup",
+        "description": ""
+    },
+    "settingsSavedSuccess": {
+        "message": "Configurações salvas com sucesso",
+        "description": ""
+    },
+    "saving": {
+        "message": "Salvando...",
+        "description": ""
+    },
+    "noBackupsHint": {
+        "message": "Nenhum backup encontrado. Clique em \"Atualizar lista de backups\" para carregar os dados.",
+        "description": ""
+    },
+    "bookmarkActions": {
+        "message": "Ações de favoritos",
+        "description": "Aria label for popup menu"
+    },
+    "bookmarkCounts": {
+        "message": "Contagem de favoritos",
+        "description": "Aria label for bookmark counts section"
+    },
+    "noBackupRecords": {
+        "message": "Nenhum registro de backup encontrado. Os backups são criados automaticamente ao sincronizar.",
+        "description": ""
+    },
+    "restoreBackup": {
+        "message": "Restaurar backup",
+        "description": ""
+    },
+    "restoring": {
+        "message": "Restaurando favoritos...",
+        "description": ""
+    },
+    "restoreFailed": {
+        "message": "Falha ao restaurar o backup.",
+        "description": ""
+    },
+    "confirmRestoreBackup": {
+        "message": "Tem certeza de que deseja restaurar este backup? Os favoritos atuais serão substituídos.",
+        "description": ""
+    },
+    "confirmDeleteBackup": {
+        "message": "Excluir este backup?",
+        "description": ""
+    },
+    "weakPasswordWarning": {
+        "message": "Senha fraca: deve ter pelo menos 12 caracteres com maiúsculas, minúsculas, números e caracteres especiais",
+        "description": "Warning message for weak master password"
+    },
+    "githubTokenPlaceholder": {
+        "message": "Token do GitHub",
+        "description": "Placeholder for GitHub token input"
+    },
+    "gistIdPlaceholder": {
+        "message": "ID do Gist",
+        "description": "Placeholder for Gist ID input"
+    },
+    "gistFileNamePlaceholder": {
+        "message": "Nome do arquivo do Gist",
+        "description": "Placeholder for Gist file name input"
+    },
+    "webdavUrlPlaceholder": {
+        "message": "https://your-nas.com/remote.php/dav/files/username/",
+        "description": "Placeholder for WebDAV URL input"
+    },
+    "webdavUsernamePlaceholder": {
+        "message": "Usuário",
+        "description": "Placeholder for WebDAV username input"
+    },
+    "webdavPasswordPlaceholder": {
+        "message": "Senha",
+        "description": "Placeholder for WebDAV password input"
+    },
+    "webdavPathPlaceholder": {
+        "message": "/bookmarks.json",
+        "description": "Placeholder for WebDAV path input"
+    },
+    "partialFailure": {
+        "message": "Concluído com falhas",
+        "description": "Download/restore finished but some bookmarks failed to be recreated"
+    },
+    "masterPasswordHint": {
+        "message": "Sem uma senha mestra, as credenciais são criptografadas apenas com uma chave derivada do ID (público) da extensão — a proteção é fraca. Defina uma senha mestra para proteção real.",
+        "description": "Security boundary hint for the optional master password"
+    },
+    "webdavPermissionDenied": {
+        "message": "A permissão de host do WebDAV foi negada. Sem ela, a extensão não pode acessar o servidor WebDAV.",
+        "description": "Shown when the user denies the WebDAV origin permission request"
+    },
+    "syncNow": {
+        "message": "Sincronização inteligente (combinar)",
+        "description": "Popup menu item that runs the three-way merge sync"
+    },
+    "syncNowDesc": {
+        "message": "Combina as alterações de favoritos locais e remotas",
+        "description": "Tooltip for the Smart Sync menu item"
+    },
+    "syncRunning": {
+        "message": "Sincronizando…",
+        "description": "Shown in the popup footer while a sync is running"
+    },
+    "syncDone": {
+        "message": "Sincronização concluída",
+        "description": "Shown after a successful sync"
+    },
+    "syncFailedLabel": {
+        "message": "Falha na sincronização",
+        "description": "Shown after a failed sync"
+    },
+    "syncSkipped": {
+        "message": "Sincronização ignorada (já em andamento)",
+        "description": "Shown when a sync was skipped"
+    },
+    "syncConflicts": {
+        "message": "conflitos resolvidos",
+        "description": "Appended to sync result when conflicts were auto-resolved"
+    },
+    "confirmDownload": {
+        "message": "O download APAGARÁ todos os favoritos locais e os recriará a partir da cópia remota. Continuar?",
+        "description": "Confirmation before the destructive download action"
+    },
+    "lastSyncLabel": {
+        "message": "Última sincronização",
+        "description": "Label for the last sync time in the footer"
+    },
+    "testGithubConnection": {
+        "message": "Testar conexão com o GitHub",
+        "description": "Button to verify GitHub token and gist access"
+    },
+    "githubConnectionOk": {
+        "message": "Conexão com o GitHub OK",
+        "description": "GitHub connectivity test succeeded"
+    },
+    "githubConnectionFailed": {
+        "message": "Falha na conexão com o GitHub",
+        "description": "GitHub connectivity test failed"
+    },
+    "webdavUrlInvalid": {
+        "message": "A URL do WebDAV deve ser uma URL absoluta válida (ex.: https://host/dav/)",
+        "description": "WebDAV URL format validation error"
+    },
+    "error_AUTH_TOKEN_MISSING": {
+        "message": "Token do GitHub ausente. Defina-o na página de opções.",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_MISSING"
+    },
+    "error_AUTH_TOKEN_INVALID": {
+        "message": "Token do GitHub inválido ou expirado. Insira-o novamente.",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_INVALID"
+    },
+    "error_GIST_ID_MISSING": {
+        "message": "ID do Gist ausente. Defina-o na página de opções.",
+        "description": "User-facing message for ErrorCode GIST_ID_MISSING"
+    },
+    "error_FILE_NAME_MISSING": {
+        "message": "Nome do arquivo de sincronização ausente.",
+        "description": "User-facing message for ErrorCode FILE_NAME_MISSING"
+    },
+    "error_NETWORK_ERROR": {
+        "message": "Erro de rede. Verifique sua conexão e tente novamente.",
+        "description": "User-facing message for ErrorCode NETWORK_ERROR"
+    },
+    "error_REQUEST_TIMEOUT": {
+        "message": "A solicitação expirou. Tente novamente mais tarde.",
+        "description": "User-facing message for ErrorCode REQUEST_TIMEOUT"
+    },
+    "error_RATE_LIMIT": {
+        "message": "Limite de solicitações da API atingido. Tentaremos novamente automaticamente.",
+        "description": "User-facing message for ErrorCode RATE_LIMIT"
+    },
+    "error_RATE_LIMIT_EXCEEDED": {
+        "message": "Limite de solicitações da API excedido. Tente novamente mais tarde.",
+        "description": "User-facing message for ErrorCode RATE_LIMIT_EXCEEDED"
+    },
+    "error_FILE_NOT_FOUND": {
+        "message": "Arquivo de sincronização remoto não encontrado. Envie uma vez para criá-lo.",
+        "description": "User-facing message for ErrorCode FILE_NOT_FOUND"
+    },
+    "error_EMPTY_GIST_FILE": {
+        "message": "O arquivo de sincronização remoto está vazio.",
+        "description": "User-facing message for ErrorCode EMPTY_GIST_FILE"
+    },
+    "error_GIST_FILE_TRUNCATED": {
+        "message": "O arquivo remoto está truncado e não pode ser lido por completo.",
+        "description": "User-facing message for ErrorCode GIST_FILE_TRUNCATED"
+    },
+    "error_SYNC_DATA_CORRUPTED": {
+        "message": "Os dados de sincronização remotos estão corrompidos.",
+        "description": "User-facing message for ErrorCode SYNC_DATA_CORRUPTED"
+    },
+    "error_INVALID_DATA_FORMAT": {
+        "message": "Formato dos dados remotos não reconhecido.",
+        "description": "User-facing message for ErrorCode INVALID_DATA_FORMAT"
+    },
+    "error_SYNC_FAILED": {
+        "message": "Falha na sincronização.",
+        "description": "User-facing message for ErrorCode SYNC_FAILED"
+    },
+    "error_SYNC_IN_PROGRESS": {
+        "message": "Já há uma sincronização em andamento.",
+        "description": "User-facing message for ErrorCode SYNC_IN_PROGRESS"
+    },
+    "error_MERGE_FAILED": {
+        "message": "Falha ao combinar os favoritos.",
+        "description": "User-facing message for ErrorCode MERGE_FAILED"
+    },
+    "error_MERGE_CONFLICT": {
+        "message": "Conflitos de sincronização detectados.",
+        "description": "User-facing message for ErrorCode MERGE_CONFLICT"
+    },
+    "error_WEBDAV_AUTH_FAILED": {
+        "message": "Falha na autenticação do WebDAV. Verifique o usuário e a senha.",
+        "description": "User-facing message for ErrorCode WEBDAV_AUTH_FAILED"
+    },
+    "error_WEBDAV_READ_ERROR": {
+        "message": "Falha ao ler do WebDAV.",
+        "description": "User-facing message for ErrorCode WEBDAV_READ_ERROR"
+    },
+    "error_WEBDAV_WRITE_ERROR": {
+        "message": "Falha ao gravar no WebDAV.",
+        "description": "User-facing message for ErrorCode WEBDAV_WRITE_ERROR"
+    },
+    "error_WEBDAV_FILE_NOT_FOUND": {
+        "message": "Arquivo do WebDAV não encontrado. Envie uma vez para criá-lo.",
+        "description": "User-facing message for ErrorCode WEBDAV_FILE_NOT_FOUND"
+    },
+    "error_WEBDAV_CONNECTION_FAILED": {
+        "message": "Servidor WebDAV inacessível.",
+        "description": "User-facing message for ErrorCode WEBDAV_CONNECTION_FAILED"
+    },
+    "error_IMPORT_ERROR": {
+        "message": "Falha ao importar favoritos.",
+        "description": "User-facing message for ErrorCode IMPORT_ERROR"
+    },
+    "error_EXPORT_ERROR": {
+        "message": "Falha ao exportar favoritos.",
+        "description": "User-facing message for ErrorCode EXPORT_ERROR"
+    },
+    "error_PARSE_ERROR": {
+        "message": "Falha ao analisar os dados.",
+        "description": "User-facing message for ErrorCode PARSE_ERROR"
+    },
+    "error_VALIDATION_ERROR": {
+        "message": "Configurações inválidas. Verifique os dados informados.",
+        "description": "User-facing message for ErrorCode VALIDATION_ERROR"
+    },
+    "error_UNKNOWN_ERROR": {
+        "message": "Falha na operação. Tente novamente mais tarde.",
+        "description": "User-facing message for ErrorCode UNKNOWN_ERROR"
     }
 }

@@ -118,5 +118,565 @@
     "saveSettings": {
         "message": "حفظ الإعدادات",
         "description": ""
+    },
+    "autoSync": {
+        "message": "المزامنة التلقائية",
+        "description": ""
+    },
+    "syncInterval": {
+        "message": "فاصل المزامنة",
+        "description": ""
+    },
+    "syncMode": {
+        "message": "وضع المزامنة",
+        "description": ""
+    },
+    "conflictMode": {
+        "message": "وضع التعارض",
+        "description": ""
+    },
+    "storageType": {
+        "message": "النوع",
+        "description": ""
+    },
+    "webdav": {
+        "message": "WebDAV",
+        "description": ""
+    },
+    "syncConflict": {
+        "message": "تعارض في المزامنة",
+        "description": ""
+    },
+    "conflictsDetected": {
+        "message": "تعارضات تم اكتشافها",
+        "description": ""
+    },
+    "export": {
+        "message": "تصدير",
+        "description": ""
+    },
+    "import": {
+        "message": "استيراد",
+        "description": ""
+    },
+    "githubGist": {
+        "message": "GitHub Gist",
+        "description": ""
+    },
+    "getToken": {
+        "message": "الحصول على الرمز",
+        "description": ""
+    },
+    "enableAutoSync": {
+        "message": "تفعيل المزامنة التلقائية",
+        "description": ""
+    },
+    "syncModeTimer": {
+        "message": "مؤقت",
+        "description": ""
+    },
+    "syncModeEvent": {
+        "message": "حدث",
+        "description": ""
+    },
+    "syncModeHybrid": {
+        "message": "هجين",
+        "description": ""
+    },
+    "interval15": {
+        "message": "15 دقيقة",
+        "description": ""
+    },
+    "interval30": {
+        "message": "30 دقيقة",
+        "description": ""
+    },
+    "interval60": {
+        "message": "ساعة واحدة",
+        "description": ""
+    },
+    "interval360": {
+        "message": "6 ساعات",
+        "description": ""
+    },
+    "interval1440": {
+        "message": "24 ساعة",
+        "description": ""
+    },
+    "conflictAuto": {
+        "message": "دمج تلقائي",
+        "description": ""
+    },
+    "conflictPrompt": {
+        "message": "أبلغني",
+        "description": ""
+    },
+    "storageService": {
+        "message": "خدمة التخزين",
+        "description": ""
+    },
+    "webdavUrl": {
+        "message": "عنوان URL الخاص بـ WebDAV",
+        "description": ""
+    },
+    "webdavUsername": {
+        "message": "اسم مستخدم WebDAV",
+        "description": ""
+    },
+    "webdavPassword": {
+        "message": "كلمة مرور WebDAV",
+        "description": ""
+    },
+    "webdavPath": {
+        "message": "مسار WebDAV",
+        "description": ""
+    },
+    "testWebDAVConnection": {
+        "message": "اختبار اتصال WebDAV",
+        "description": ""
+    },
+    "testing": {
+        "message": "جارٍ الاختبار...",
+        "description": ""
+    },
+    "exportBookmarks": {
+        "message": "تصدير العلامات المرجعية",
+        "description": ""
+    },
+    "importBookmarks": {
+        "message": "استيراد العلامات المرجعية",
+        "description": ""
+    },
+    "intervalSync": {
+        "message": "المزامنة المؤقتة",
+        "description": ""
+    },
+    "intervalSyncDesc": {
+        "message": "مزامنة العلامات المرجعية تلقائيًا على فترات زمنية محددة",
+        "description": ""
+    },
+    "eventSync": {
+        "message": "المزامنة عند الأحداث",
+        "description": ""
+    },
+    "eventSyncDesc": {
+        "message": "المزامنة عند بدء تشغيل المتصفح أو عند تغيّر العلامات المرجعية (إضافة/تعديل/حذف)",
+        "description": ""
+    },
+    "interval720": {
+        "message": "12 ساعة",
+        "description": ""
+    },
+    "local": {
+        "message": "محلي",
+        "description": "Local bookmarks label"
+    },
+    "remote": {
+        "message": "بعيد",
+        "description": "Remote bookmarks label"
+    },
+    "validationError": {
+        "message": "خطأ في التحقق",
+        "description": "Validation error header"
+    },
+    "githubTokenRequired": {
+        "message": "لا يمكن ترك رمز GitHub فارغًا",
+        "description": ""
+    },
+    "gistIdRequired": {
+        "message": "لا يمكن ترك معرف Gist فارغًا",
+        "description": ""
+    },
+    "webdavUrlRequired": {
+        "message": "لا يمكن ترك عنوان URL الخاص بـ WebDAV فارغًا",
+        "description": ""
+    },
+    "webdavUsernameRequired": {
+        "message": "لا يمكن ترك اسم مستخدم WebDAV فارغًا",
+        "description": ""
+    },
+    "webdavPasswordRequired": {
+        "message": "لا يمكن ترك كلمة مرور WebDAV فارغة",
+        "description": ""
+    },
+    "backupManagement": {
+        "message": "إدارة النسخ الاحتياطية",
+        "description": ""
+    },
+    "enableAutoBackup": {
+        "message": "تفعيل النسخ الاحتياطي التلقائي",
+        "description": ""
+    },
+    "maxBackups": {
+        "message": "الحد الأقصى للنسخ الاحتياطية",
+        "description": ""
+    },
+    "refreshBackupList": {
+        "message": "تحديث قائمة النسخ الاحتياطية",
+        "description": ""
+    },
+    "backupDate": {
+        "message": "تاريخ النسخة الاحتياطية",
+        "description": ""
+    },
+    "bookmarkCount": {
+        "message": "العلامات المرجعية",
+        "description": ""
+    },
+    "fileSize": {
+        "message": "الحجم",
+        "description": ""
+    },
+    "actions": {
+        "message": "الإجراءات",
+        "description": ""
+    },
+    "restore": {
+        "message": "استعادة",
+        "description": ""
+    },
+    "download": {
+        "message": "تنزيل",
+        "description": ""
+    },
+    "delete": {
+        "message": "حذف",
+        "description": ""
+    },
+    "noBackups": {
+        "message": "لا توجد نسخ احتياطية",
+        "description": ""
+    },
+    "confirmRestore": {
+        "message": "تأكيد الاستعادة",
+        "description": ""
+    },
+    "confirmRestoreDesc": {
+        "message": "هل أنت متأكد من استعادة العلامات المرجعية من النسخة الاحتياطية المحددة؟ سيتم استبدال العلامات المرجعية الحالية.",
+        "description": ""
+    },
+    "cancel": {
+        "message": "إلغاء",
+        "description": ""
+    },
+    "confirmRestoreButton": {
+        "message": "تأكيد الاستعادة",
+        "description": ""
+    },
+    "backupHistory": {
+        "message": "سجل النسخ الاحتياطية",
+        "description": ""
+    },
+    "localCache": {
+        "message": "ذاكرة التخزين المؤقتة المحلية",
+        "description": ""
+    },
+    "current": {
+        "message": "الحالي",
+        "description": ""
+    },
+    "backupSource": {
+        "message": "المصدر",
+        "description": ""
+    },
+    "backupTime": {
+        "message": "وقت النسخ الاحتياطي",
+        "description": ""
+    },
+    "debounceTime": {
+        "message": "وقت التأخير (مللي ثانية)",
+        "description": ""
+    },
+    "restoreSuccess": {
+        "message": "تمت استعادة النسخة الاحتياطية بنجاح",
+        "description": ""
+    },
+    "importSuccess": {
+        "message": "تم استيراد $COUNT$ من العلامات المرجعية بنجاح",
+        "description": "Success message for import",
+        "placeholders": {
+            "COUNT": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "importFailed": {
+        "message": "فشل استيراد العلامات المرجعية: $ERROR$",
+        "description": "Error message for import failure",
+        "placeholders": {
+            "ERROR": {
+                "content": "$1",
+                "example": "Invalid file format"
+            }
+        }
+    },
+    "webdavFieldsRequired": {
+        "message": "يرجى ملء جميع حقول WebDAV",
+        "description": ""
+    },
+    "loading": {
+        "message": "جارٍ التحميل...",
+        "description": ""
+    },
+    "loadingBackupData": {
+        "message": "جارٍ تحميل بيانات النسخ الاحتياطية...",
+        "description": ""
+    },
+    "failedToLoadBackupData": {
+        "message": "فشل تحميل بيانات النسخ الاحتياطية",
+        "description": ""
+    },
+    "failedToRestoreBackup": {
+        "message": "فشل في استعادة النسخة الاحتياطية",
+        "description": ""
+    },
+    "settingsSavedSuccess": {
+        "message": "تم حفظ الإعدادات بنجاح",
+        "description": ""
+    },
+    "saving": {
+        "message": "جارٍ الحفظ...",
+        "description": ""
+    },
+    "noBackupsHint": {
+        "message": "لا توجد نسخ احتياطية. انقر فوق \"تحديث قائمة النسخ الاحتياطية\" لتحميل البيانات.",
+        "description": ""
+    },
+    "bookmarkActions": {
+        "message": "إجراءات العلامات المرجعية",
+        "description": "Aria label for popup menu"
+    },
+    "bookmarkCounts": {
+        "message": "عدد العلامات المرجعية",
+        "description": "Aria label for bookmark counts section"
+    },
+    "noBackupRecords": {
+        "message": "لا توجد سجلات نسخ احتياطي. يتم إنشاء النسخ الاحتياطية تلقائيًا عند المزامنة.",
+        "description": ""
+    },
+    "restoreBackup": {
+        "message": "استعادة النسخة الاحتياطية",
+        "description": ""
+    },
+    "restoring": {
+        "message": "جارٍ استعادة العلامات المرجعية...",
+        "description": ""
+    },
+    "restoreFailed": {
+        "message": "فشل استعادة النسخة الاحتياطية.",
+        "description": ""
+    },
+    "confirmRestoreBackup": {
+        "message": "هل أنت متأكد من استعادة هذه النسخة الاحتياطية؟ سيتم استبدال العلامات المرجعية الحالية.",
+        "description": ""
+    },
+    "confirmDeleteBackup": {
+        "message": "حذف هذه النسخة الاحتياطية؟",
+        "description": ""
+    },
+    "weakPasswordWarning": {
+        "message": "كلمة مرور ضعيفة: يجب ألا تقل عن 12 حرفًا وتتضمن أحرفًا كبيرة وصغيرة وأرقامًا ورموزًا خاصة",
+        "description": "Warning message for weak master password"
+    },
+    "githubTokenPlaceholder": {
+        "message": "رمز GitHub",
+        "description": "Placeholder for GitHub token input"
+    },
+    "gistIdPlaceholder": {
+        "message": "معرف Gist",
+        "description": "Placeholder for Gist ID input"
+    },
+    "gistFileNamePlaceholder": {
+        "message": "اسم ملف Gist",
+        "description": "Placeholder for Gist file name input"
+    },
+    "webdavUrlPlaceholder": {
+        "message": "https://your-nas.com/remote.php/dav/files/username/",
+        "description": "Placeholder for WebDAV URL input"
+    },
+    "webdavUsernamePlaceholder": {
+        "message": "اسم المستخدم",
+        "description": "Placeholder for WebDAV username input"
+    },
+    "webdavPasswordPlaceholder": {
+        "message": "كلمة المرور",
+        "description": "Placeholder for WebDAV password input"
+    },
+    "webdavPathPlaceholder": {
+        "message": "/bookmarks.json",
+        "description": "Placeholder for WebDAV path input"
+    },
+    "partialFailure": {
+        "message": "اكتمل مع وجود إخفاقات",
+        "description": "Download/restore finished but some bookmarks failed to be recreated"
+    },
+    "masterPasswordHint": {
+        "message": "بدون كلمة مرور رئيسية، يتم تشفير بيانات الاعتماد فقط بمفتاح مشتق من معرف الامتداد (العام) — الحماية ضعيفة. عيّن كلمة مرور رئيسية لحماية حقيقية.",
+        "description": "Security boundary hint for the optional master password"
+    },
+    "webdavPermissionDenied": {
+        "message": "تم رفض إذن مضيف WebDAV. بدون هذا الإذن لا يمكن للامتداد الوصول إلى خادم WebDAV.",
+        "description": "Shown when the user denies the WebDAV origin permission request"
+    },
+    "syncNow": {
+        "message": "مزامنة ذكية (دمج)",
+        "description": "Popup menu item that runs the three-way merge sync"
+    },
+    "syncNowDesc": {
+        "message": "دمج تغييرات العلامات المرجعية المحلية والبعيدة",
+        "description": "Tooltip for the Smart Sync menu item"
+    },
+    "syncRunning": {
+        "message": "جارٍ المزامنة…",
+        "description": "Shown in the popup footer while a sync is running"
+    },
+    "syncDone": {
+        "message": "اكتملت المزامنة",
+        "description": "Shown after a successful sync"
+    },
+    "syncFailedLabel": {
+        "message": "فشلت المزامنة",
+        "description": "Shown after a failed sync"
+    },
+    "syncSkipped": {
+        "message": "تم تخطي المزامنة (قيد التنفيذ بالفعل)",
+        "description": "Shown when a sync was skipped"
+    },
+    "syncConflicts": {
+        "message": "تعارضات تم حلها",
+        "description": "Appended to sync result when conflicts were auto-resolved"
+    },
+    "confirmDownload": {
+        "message": "سيؤدي التنزيل إلى مسح جميع العلامات المرجعية المحلية وإعادة بنائها من النسخة البعيدة. هل تريد المتابعة؟",
+        "description": "Confirmation before the destructive download action"
+    },
+    "lastSyncLabel": {
+        "message": "آخر مزامنة",
+        "description": "Label for the last sync time in the footer"
+    },
+    "testGithubConnection": {
+        "message": "اختبار اتصال GitHub",
+        "description": "Button to verify GitHub token and gist access"
+    },
+    "githubConnectionOk": {
+        "message": "اتصال GitHub سليم",
+        "description": "GitHub connectivity test succeeded"
+    },
+    "githubConnectionFailed": {
+        "message": "فشل اتصال GitHub",
+        "description": "GitHub connectivity test failed"
+    },
+    "webdavUrlInvalid": {
+        "message": "يجب أن يكون عنوان URL الخاص بـ WebDAV عنوان URL مطلقًا صالحًا (مثل https://host/dav/)",
+        "description": "WebDAV URL format validation error"
+    },
+    "error_AUTH_TOKEN_MISSING": {
+        "message": "رمز GitHub مفقود. يرجى تعيينه في صفحة الإعدادات.",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_MISSING"
+    },
+    "error_AUTH_TOKEN_INVALID": {
+        "message": "رمز GitHub غير صالح أو منتهي الصلاحية. يرجى إدخاله من جديد.",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_INVALID"
+    },
+    "error_GIST_ID_MISSING": {
+        "message": "معرف Gist مفقود. يرجى تعيينه في صفحة الإعدادات.",
+        "description": "User-facing message for ErrorCode GIST_ID_MISSING"
+    },
+    "error_FILE_NAME_MISSING": {
+        "message": "اسم ملف المزامنة مفقود.",
+        "description": "User-facing message for ErrorCode FILE_NAME_MISSING"
+    },
+    "error_NETWORK_ERROR": {
+        "message": "خطأ في الشبكة. تحقق من اتصالك وأعد المحاولة.",
+        "description": "User-facing message for ErrorCode NETWORK_ERROR"
+    },
+    "error_REQUEST_TIMEOUT": {
+        "message": "انتهت مهلة الطلب. أعد المحاولة لاحقًا.",
+        "description": "User-facing message for ErrorCode REQUEST_TIMEOUT"
+    },
+    "error_RATE_LIMIT": {
+        "message": "تم الوصول إلى حد الطلبات. ستتم إعادة المحاولة تلقائيًا.",
+        "description": "User-facing message for ErrorCode RATE_LIMIT"
+    },
+    "error_RATE_LIMIT_EXCEEDED": {
+        "message": "تم تجاوز حد الطلبات. أعد المحاولة لاحقًا.",
+        "description": "User-facing message for ErrorCode RATE_LIMIT_EXCEEDED"
+    },
+    "error_FILE_NOT_FOUND": {
+        "message": "ملف المزامنة البعيد غير موجود. قم بالرفع مرة واحدة لإنشائه.",
+        "description": "User-facing message for ErrorCode FILE_NOT_FOUND"
+    },
+    "error_EMPTY_GIST_FILE": {
+        "message": "ملف المزامنة البعيد فارغ.",
+        "description": "User-facing message for ErrorCode EMPTY_GIST_FILE"
+    },
+    "error_GIST_FILE_TRUNCATED": {
+        "message": "الملف البعيد مبتور ولا يمكن قراءته بالكامل.",
+        "description": "User-facing message for ErrorCode GIST_FILE_TRUNCATED"
+    },
+    "error_SYNC_DATA_CORRUPTED": {
+        "message": "بيانات المزامنة البعيدة تالفة.",
+        "description": "User-facing message for ErrorCode SYNC_DATA_CORRUPTED"
+    },
+    "error_INVALID_DATA_FORMAT": {
+        "message": "تنسيق البيانات البعيدة غير معروف.",
+        "description": "User-facing message for ErrorCode INVALID_DATA_FORMAT"
+    },
+    "error_SYNC_FAILED": {
+        "message": "فشلت المزامنة.",
+        "description": "User-facing message for ErrorCode SYNC_FAILED"
+    },
+    "error_SYNC_IN_PROGRESS": {
+        "message": "المزامنة قيد التنفيذ بالفعل.",
+        "description": "User-facing message for ErrorCode SYNC_IN_PROGRESS"
+    },
+    "error_MERGE_FAILED": {
+        "message": "فشل دمج العلامات المرجعية.",
+        "description": "User-facing message for ErrorCode MERGE_FAILED"
+    },
+    "error_MERGE_CONFLICT": {
+        "message": "تم اكتشاف تعارضات في المزامنة.",
+        "description": "User-facing message for ErrorCode MERGE_CONFLICT"
+    },
+    "error_WEBDAV_AUTH_FAILED": {
+        "message": "فشلت مصادقة WebDAV. تحقق من اسم المستخدم وكلمة المرور.",
+        "description": "User-facing message for ErrorCode WEBDAV_AUTH_FAILED"
+    },
+    "error_WEBDAV_READ_ERROR": {
+        "message": "فشلت قراءة WebDAV.",
+        "description": "User-facing message for ErrorCode WEBDAV_READ_ERROR"
+    },
+    "error_WEBDAV_WRITE_ERROR": {
+        "message": "فشلت الكتابة إلى WebDAV.",
+        "description": "User-facing message for ErrorCode WEBDAV_WRITE_ERROR"
+    },
+    "error_WEBDAV_FILE_NOT_FOUND": {
+        "message": "ملف WebDAV غير موجود. قم بالرفع مرة واحدة لإنشائه.",
+        "description": "User-facing message for ErrorCode WEBDAV_FILE_NOT_FOUND"
+    },
+    "error_WEBDAV_CONNECTION_FAILED": {
+        "message": "خادم WebDAV غير قابل للوصول.",
+        "description": "User-facing message for ErrorCode WEBDAV_CONNECTION_FAILED"
+    },
+    "error_IMPORT_ERROR": {
+        "message": "فشل استيراد العلامات المرجعية.",
+        "description": "User-facing message for ErrorCode IMPORT_ERROR"
+    },
+    "error_EXPORT_ERROR": {
+        "message": "فشل تصدير العلامات المرجعية.",
+        "description": "User-facing message for ErrorCode EXPORT_ERROR"
+    },
+    "error_PARSE_ERROR": {
+        "message": "فشل تحليل البيانات.",
+        "description": "User-facing message for ErrorCode PARSE_ERROR"
+    },
+    "error_VALIDATION_ERROR": {
+        "message": "إعدادات غير صالحة. يرجى التحقق من المدخلات.",
+        "description": "User-facing message for ErrorCode VALIDATION_ERROR"
+    },
+    "error_UNKNOWN_ERROR": {
+        "message": "فشلت العملية. حاول مرة أخرى لاحقًا.",
+        "description": "User-facing message for ErrorCode UNKNOWN_ERROR"
     }
 }

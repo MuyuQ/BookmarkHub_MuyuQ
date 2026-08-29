@@ -30,6 +30,8 @@ export const STORAGE_KEYS = {
   LAST_SYNC_TIME: 'lastSyncTime',
   LAST_SYNC_STATUS: 'lastSyncStatus',
   LAST_SYNC_ERROR: 'lastSyncError',
+  /** 上次同步自动解决的冲突数量（只读冲突报告） */
+  LAST_SYNC_CONFLICTS: 'lastSyncConflicts',
 } as const;
 
 // WebDAV 默认配置

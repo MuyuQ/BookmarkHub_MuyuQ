@@ -118,5 +118,565 @@
     "saveSettings": {
         "message": "設定を保存",
         "description": ""
+    },
+    "autoSync": {
+        "message": "自動同期",
+        "description": ""
+    },
+    "syncInterval": {
+        "message": "同期間隔",
+        "description": ""
+    },
+    "syncMode": {
+        "message": "同期モード",
+        "description": ""
+    },
+    "conflictMode": {
+        "message": "競合モード",
+        "description": ""
+    },
+    "storageType": {
+        "message": "種類",
+        "description": ""
+    },
+    "webdav": {
+        "message": "WebDAV",
+        "description": ""
+    },
+    "syncConflict": {
+        "message": "同期の競合",
+        "description": ""
+    },
+    "conflictsDetected": {
+        "message": "件の競合を検出",
+        "description": ""
+    },
+    "export": {
+        "message": "エクスポート",
+        "description": ""
+    },
+    "import": {
+        "message": "インポート",
+        "description": ""
+    },
+    "githubGist": {
+        "message": "GitHub Gist",
+        "description": ""
+    },
+    "getToken": {
+        "message": "トークンを取得",
+        "description": ""
+    },
+    "enableAutoSync": {
+        "message": "自動同期を有効にする",
+        "description": ""
+    },
+    "syncModeTimer": {
+        "message": "タイマー",
+        "description": ""
+    },
+    "syncModeEvent": {
+        "message": "イベント",
+        "description": ""
+    },
+    "syncModeHybrid": {
+        "message": "ハイブリッド",
+        "description": ""
+    },
+    "interval15": {
+        "message": "15分",
+        "description": ""
+    },
+    "interval30": {
+        "message": "30分",
+        "description": ""
+    },
+    "interval60": {
+        "message": "1時間",
+        "description": ""
+    },
+    "interval360": {
+        "message": "6時間",
+        "description": ""
+    },
+    "interval1440": {
+        "message": "24時間",
+        "description": ""
+    },
+    "conflictAuto": {
+        "message": "自動マージ",
+        "description": ""
+    },
+    "conflictPrompt": {
+        "message": "確認する",
+        "description": ""
+    },
+    "storageService": {
+        "message": "ストレージサービス",
+        "description": ""
+    },
+    "webdavUrl": {
+        "message": "WebDAV URL",
+        "description": ""
+    },
+    "webdavUsername": {
+        "message": "WebDAV ユーザー名",
+        "description": ""
+    },
+    "webdavPassword": {
+        "message": "WebDAV パスワード",
+        "description": ""
+    },
+    "webdavPath": {
+        "message": "WebDAV パス",
+        "description": ""
+    },
+    "testWebDAVConnection": {
+        "message": "WebDAV 接続をテスト",
+        "description": ""
+    },
+    "testing": {
+        "message": "テスト中...",
+        "description": ""
+    },
+    "exportBookmarks": {
+        "message": "ブックマークをエクスポート",
+        "description": ""
+    },
+    "importBookmarks": {
+        "message": "ブックマークをインポート",
+        "description": ""
+    },
+    "intervalSync": {
+        "message": "タイマー同期",
+        "description": ""
+    },
+    "intervalSyncDesc": {
+        "message": "設定した間隔でブックマークを自動的に同期します",
+        "description": ""
+    },
+    "eventSync": {
+        "message": "イベント同期",
+        "description": ""
+    },
+    "eventSyncDesc": {
+        "message": "ブラウザの起動時やブックマークの変更（作成/変更/削除）時に同期します",
+        "description": ""
+    },
+    "interval720": {
+        "message": "12時間",
+        "description": ""
+    },
+    "local": {
+        "message": "ローカル",
+        "description": "Local bookmarks label"
+    },
+    "remote": {
+        "message": "リモート",
+        "description": "Remote bookmarks label"
+    },
+    "validationError": {
+        "message": "検証エラー",
+        "description": "Validation error header"
+    },
+    "githubTokenRequired": {
+        "message": "GitHub トークンは空にできません",
+        "description": ""
+    },
+    "gistIdRequired": {
+        "message": "Gist ID は空にできません",
+        "description": ""
+    },
+    "webdavUrlRequired": {
+        "message": "WebDAV URL は空にできません",
+        "description": ""
+    },
+    "webdavUsernameRequired": {
+        "message": "WebDAV ユーザー名は空にできません",
+        "description": ""
+    },
+    "webdavPasswordRequired": {
+        "message": "WebDAV パスワードは空にできません",
+        "description": ""
+    },
+    "backupManagement": {
+        "message": "バックアップ管理",
+        "description": ""
+    },
+    "enableAutoBackup": {
+        "message": "自動バックアップを有効にする",
+        "description": ""
+    },
+    "maxBackups": {
+        "message": "最大バックアップ数",
+        "description": ""
+    },
+    "refreshBackupList": {
+        "message": "バックアップ一覧を更新",
+        "description": ""
+    },
+    "backupDate": {
+        "message": "バックアップ日時",
+        "description": ""
+    },
+    "bookmarkCount": {
+        "message": "ブックマーク",
+        "description": ""
+    },
+    "fileSize": {
+        "message": "サイズ",
+        "description": ""
+    },
+    "actions": {
+        "message": "操作",
+        "description": ""
+    },
+    "restore": {
+        "message": "復元",
+        "description": ""
+    },
+    "download": {
+        "message": "ダウンロード",
+        "description": ""
+    },
+    "delete": {
+        "message": "削除",
+        "description": ""
+    },
+    "noBackups": {
+        "message": "バックアップが見つかりません",
+        "description": ""
+    },
+    "confirmRestore": {
+        "message": "復元の確認",
+        "description": ""
+    },
+    "confirmRestoreDesc": {
+        "message": "選択したバックアップからブックマークを復元しますか？現在のブックマークは置き換えられます。",
+        "description": ""
+    },
+    "cancel": {
+        "message": "キャンセル",
+        "description": ""
+    },
+    "confirmRestoreButton": {
+        "message": "復元を実行",
+        "description": ""
+    },
+    "backupHistory": {
+        "message": "バックアップ履歴",
+        "description": ""
+    },
+    "localCache": {
+        "message": "ローカルキャッシュ",
+        "description": ""
+    },
+    "current": {
+        "message": "現在",
+        "description": ""
+    },
+    "backupSource": {
+        "message": "ソース",
+        "description": ""
+    },
+    "backupTime": {
+        "message": "バックアップ時刻",
+        "description": ""
+    },
+    "debounceTime": {
+        "message": "デバウンス時間 (ms)",
+        "description": ""
+    },
+    "restoreSuccess": {
+        "message": "バックアップを復元しました",
+        "description": ""
+    },
+    "importSuccess": {
+        "message": "$COUNT$ 件のブックマークをインポートしました",
+        "description": "Success message for import",
+        "placeholders": {
+            "COUNT": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "importFailed": {
+        "message": "ブックマークのインポートに失敗しました: $ERROR$",
+        "description": "Error message for import failure",
+        "placeholders": {
+            "ERROR": {
+                "content": "$1",
+                "example": "Invalid file format"
+            }
+        }
+    },
+    "webdavFieldsRequired": {
+        "message": "WebDAV のすべての項目を入力してください",
+        "description": ""
+    },
+    "loading": {
+        "message": "読み込み中...",
+        "description": ""
+    },
+    "loadingBackupData": {
+        "message": "バックアップデータを読み込み中...",
+        "description": ""
+    },
+    "failedToLoadBackupData": {
+        "message": "バックアップデータの読み込みに失敗しました",
+        "description": ""
+    },
+    "failedToRestoreBackup": {
+        "message": "バックアップの復元に失敗しました",
+        "description": ""
+    },
+    "settingsSavedSuccess": {
+        "message": "設定を保存しました",
+        "description": ""
+    },
+    "saving": {
+        "message": "保存中...",
+        "description": ""
+    },
+    "noBackupsHint": {
+        "message": "バックアップが見つかりません。「バックアップ一覧を更新」をクリックしてデータを読み込んでください。",
+        "description": ""
+    },
+    "bookmarkActions": {
+        "message": "ブックマーク操作",
+        "description": "Aria label for popup menu"
+    },
+    "bookmarkCounts": {
+        "message": "ブックマーク数",
+        "description": "Aria label for bookmark counts section"
+    },
+    "noBackupRecords": {
+        "message": "バックアップ記録がありません。同期時に自動的に作成されます。",
+        "description": ""
+    },
+    "restoreBackup": {
+        "message": "バックアップを復元",
+        "description": ""
+    },
+    "restoring": {
+        "message": "ブックマークを復元中...",
+        "description": ""
+    },
+    "restoreFailed": {
+        "message": "バックアップの復元に失敗しました。",
+        "description": ""
+    },
+    "confirmRestoreBackup": {
+        "message": "このバックアップを復元しますか？現在のブックマークは置き換えられます。",
+        "description": ""
+    },
+    "confirmDeleteBackup": {
+        "message": "このバックアップを削除しますか？",
+        "description": ""
+    },
+    "weakPasswordWarning": {
+        "message": "脆弱なパスワード: 大文字・小文字・数字・記号を含む 12 文字以上が必要です",
+        "description": "Warning message for weak master password"
+    },
+    "githubTokenPlaceholder": {
+        "message": "GitHub トークン",
+        "description": "Placeholder for GitHub token input"
+    },
+    "gistIdPlaceholder": {
+        "message": "Gist ID",
+        "description": "Placeholder for Gist ID input"
+    },
+    "gistFileNamePlaceholder": {
+        "message": "Gist ファイル名",
+        "description": "Placeholder for Gist file name input"
+    },
+    "webdavUrlPlaceholder": {
+        "message": "https://your-nas.com/remote.php/dav/files/username/",
+        "description": "Placeholder for WebDAV URL input"
+    },
+    "webdavUsernamePlaceholder": {
+        "message": "ユーザー名",
+        "description": "Placeholder for WebDAV username input"
+    },
+    "webdavPasswordPlaceholder": {
+        "message": "パスワード",
+        "description": "Placeholder for WebDAV password input"
+    },
+    "webdavPathPlaceholder": {
+        "message": "/bookmarks.json",
+        "description": "Placeholder for WebDAV path input"
+    },
+    "partialFailure": {
+        "message": "一部のブックマークの再作成に失敗しました",
+        "description": "Download/restore finished but some bookmarks failed to be recreated"
+    },
+    "masterPasswordHint": {
+        "message": "マスターパスワードを設定しない場合、認証情報は（公開されている）拡張機能 ID から派生した鍵で暗号化されるのみで、保護は弱くなります。確実な保護のためにはマスターパスワードを設定してください。",
+        "description": "Security boundary hint for the optional master password"
+    },
+    "webdavPermissionDenied": {
+        "message": "WebDAV ホストの権限が拒否されました。許可がないと拡張機能は WebDAV サーバーにアクセスできません。",
+        "description": "Shown when the user denies the WebDAV origin permission request"
+    },
+    "syncNow": {
+        "message": "スマート同期（マージ）",
+        "description": "Popup menu item that runs the three-way merge sync"
+    },
+    "syncNowDesc": {
+        "message": "ローカルとリモートのブックマークの変更をマージします",
+        "description": "Tooltip for the Smart Sync menu item"
+    },
+    "syncRunning": {
+        "message": "同期中…",
+        "description": "Shown in the popup footer while a sync is running"
+    },
+    "syncDone": {
+        "message": "同期が完了しました",
+        "description": "Shown after a successful sync"
+    },
+    "syncFailedLabel": {
+        "message": "同期に失敗しました",
+        "description": "Shown after a failed sync"
+    },
+    "syncSkipped": {
+        "message": "同期をスキップしました（実行中のため）",
+        "description": "Shown when a sync was skipped"
+    },
+    "syncConflicts": {
+        "message": "件の競合を解決",
+        "description": "Appended to sync result when conflicts were auto-resolved"
+    },
+    "confirmDownload": {
+        "message": "ダウンロードするとローカルのブックマークがすべて消去され、リモートのコピーから再構築されます。続行しますか？",
+        "description": "Confirmation before the destructive download action"
+    },
+    "lastSyncLabel": {
+        "message": "最終同期",
+        "description": "Label for the last sync time in the footer"
+    },
+    "testGithubConnection": {
+        "message": "GitHub 接続をテスト",
+        "description": "Button to verify GitHub token and gist access"
+    },
+    "githubConnectionOk": {
+        "message": "GitHub 接続 OK",
+        "description": "GitHub connectivity test succeeded"
+    },
+    "githubConnectionFailed": {
+        "message": "GitHub 接続に失敗しました",
+        "description": "GitHub connectivity test failed"
+    },
+    "webdavUrlInvalid": {
+        "message": "WebDAV URL は有効な絶対 URL（例: https://host/dav/）である必要があります",
+        "description": "WebDAV URL format validation error"
+    },
+    "error_AUTH_TOKEN_MISSING": {
+        "message": "GitHub トークンが未設定です。設定ページで入力してください。",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_MISSING"
+    },
+    "error_AUTH_TOKEN_INVALID": {
+        "message": "GitHub トークンが無効か期限切れです。再入力してください。",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_INVALID"
+    },
+    "error_GIST_ID_MISSING": {
+        "message": "Gist ID が未設定です。設定ページで入力してください。",
+        "description": "User-facing message for ErrorCode GIST_ID_MISSING"
+    },
+    "error_FILE_NAME_MISSING": {
+        "message": "同期ファイル名が未設定です。",
+        "description": "User-facing message for ErrorCode FILE_NAME_MISSING"
+    },
+    "error_NETWORK_ERROR": {
+        "message": "ネットワークエラーです。接続を確認して再試行してください。",
+        "description": "User-facing message for ErrorCode NETWORK_ERROR"
+    },
+    "error_REQUEST_TIMEOUT": {
+        "message": "リクエストがタイムアウトしました。しばらくしてから再試行してください。",
+        "description": "User-facing message for ErrorCode REQUEST_TIMEOUT"
+    },
+    "error_RATE_LIMIT": {
+        "message": "API のレート制限中です。自動的に再試行します。",
+        "description": "User-facing message for ErrorCode RATE_LIMIT"
+    },
+    "error_RATE_LIMIT_EXCEEDED": {
+        "message": "API のレート制限を超えました。しばらくしてから再試行してください。",
+        "description": "User-facing message for ErrorCode RATE_LIMIT_EXCEEDED"
+    },
+    "error_FILE_NOT_FOUND": {
+        "message": "リモートの同期ファイルが見つかりません。一度アップロードすると作成されます。",
+        "description": "User-facing message for ErrorCode FILE_NOT_FOUND"
+    },
+    "error_EMPTY_GIST_FILE": {
+        "message": "リモートの同期ファイルが空です。",
+        "description": "User-facing message for ErrorCode EMPTY_GIST_FILE"
+    },
+    "error_GIST_FILE_TRUNCATED": {
+        "message": "リモートファイルが途中で切れているため、完全に読み取れません。",
+        "description": "User-facing message for ErrorCode GIST_FILE_TRUNCATED"
+    },
+    "error_SYNC_DATA_CORRUPTED": {
+        "message": "リモートの同期データが破損しています。",
+        "description": "User-facing message for ErrorCode SYNC_DATA_CORRUPTED"
+    },
+    "error_INVALID_DATA_FORMAT": {
+        "message": "リモートデータの形式を認識できません。",
+        "description": "User-facing message for ErrorCode INVALID_DATA_FORMAT"
+    },
+    "error_SYNC_FAILED": {
+        "message": "同期に失敗しました。",
+        "description": "User-facing message for ErrorCode SYNC_FAILED"
+    },
+    "error_SYNC_IN_PROGRESS": {
+        "message": "すでに同期が実行中です。",
+        "description": "User-facing message for ErrorCode SYNC_IN_PROGRESS"
+    },
+    "error_MERGE_FAILED": {
+        "message": "ブックマークのマージに失敗しました。",
+        "description": "User-facing message for ErrorCode MERGE_FAILED"
+    },
+    "error_MERGE_CONFLICT": {
+        "message": "同期の競合が検出されました。",
+        "description": "User-facing message for ErrorCode MERGE_CONFLICT"
+    },
+    "error_WEBDAV_AUTH_FAILED": {
+        "message": "WebDAV の認証に失敗しました。ユーザー名とパスワードを確認してください。",
+        "description": "User-facing message for ErrorCode WEBDAV_AUTH_FAILED"
+    },
+    "error_WEBDAV_READ_ERROR": {
+        "message": "WebDAV の読み取りに失敗しました。",
+        "description": "User-facing message for ErrorCode WEBDAV_READ_ERROR"
+    },
+    "error_WEBDAV_WRITE_ERROR": {
+        "message": "WebDAV への書き込みに失敗しました。",
+        "description": "User-facing message for ErrorCode WEBDAV_WRITE_ERROR"
+    },
+    "error_WEBDAV_FILE_NOT_FOUND": {
+        "message": "WebDAV ファイルが見つかりません。一度アップロードすると作成されます。",
+        "description": "User-facing message for ErrorCode WEBDAV_FILE_NOT_FOUND"
+    },
+    "error_WEBDAV_CONNECTION_FAILED": {
+        "message": "WebDAV サーバーに接続できません。",
+        "description": "User-facing message for ErrorCode WEBDAV_CONNECTION_FAILED"
+    },
+    "error_IMPORT_ERROR": {
+        "message": "ブックマークのインポートに失敗しました。",
+        "description": "User-facing message for ErrorCode IMPORT_ERROR"
+    },
+    "error_EXPORT_ERROR": {
+        "message": "ブックマークのエクスポートに失敗しました。",
+        "description": "User-facing message for ErrorCode EXPORT_ERROR"
+    },
+    "error_PARSE_ERROR": {
+        "message": "データの解析に失敗しました。",
+        "description": "User-facing message for ErrorCode PARSE_ERROR"
+    },
+    "error_VALIDATION_ERROR": {
+        "message": "設定が無効です。入力内容を確認してください。",
+        "description": "User-facing message for ErrorCode VALIDATION_ERROR"
+    },
+    "error_UNKNOWN_ERROR": {
+        "message": "操作に失敗しました。しばらくしてから再試行してください。",
+        "description": "User-facing message for ErrorCode UNKNOWN_ERROR"
     }
 }

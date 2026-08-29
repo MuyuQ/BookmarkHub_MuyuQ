@@ -22,6 +22,7 @@ interface LastSyncInfo {
     timestamp: number;
     status: string;
     error: string;
+    conflicts: number;
 }
 
 const Popup: React.FC = () => {
@@ -40,12 +41,14 @@ const Popup: React.FC = () => {
     const refreshLastSync = useCallback(async () => {
         const data = await browser.storage.local.get([
             STORAGE_KEYS.LAST_SYNC_TIME, STORAGE_KEYS.LAST_SYNC_STATUS, STORAGE_KEYS.LAST_SYNC_ERROR,
+            STORAGE_KEYS.LAST_SYNC_CONFLICTS,
         ]);
         const timestamp = Number(data[STORAGE_KEYS.LAST_SYNC_TIME] || 0);
         setLastSync(timestamp > 0 ? {
             timestamp,
             status: String(data[STORAGE_KEYS.LAST_SYNC_STATUS] || ''),
             error: String(data[STORAGE_KEYS.LAST_SYNC_ERROR] || ''),
+            conflicts: Number(data[STORAGE_KEYS.LAST_SYNC_CONFLICTS] || 0),
         } : null);
     }, []);
 
@@ -161,7 +164,12 @@ const Popup: React.FC = () => {
         if (!lastSync) return '';
         const time = new Date(lastSync.timestamp).toLocaleString();
         const label = browser.i18n.getMessage('lastSyncLabel') || 'Last sync';
-        if (lastSync.status === 'success') return `${label}: ${time}`;
+        if (lastSync.status === 'success') {
+            const conflicts = lastSync.conflicts > 0
+                ? ` (${lastSync.conflicts} ${browser.i18n.getMessage('syncConflicts') || 'conflicts resolved'})`
+                : '';
+            return `${label}: ${time}${conflicts}`;
+        }
         if (lastSync.status === 'failed') return `${label}: ${browser.i18n.getMessage('syncFailedLabel') || 'Sync failed'} (${time})`;
         return `${label}: ${time}`;
     };

@@ -118,5 +118,565 @@
     "saveSettings": {
         "message": "설정 저장",
         "description": ""
+    },
+    "autoSync": {
+        "message": "자동 동기화",
+        "description": ""
+    },
+    "syncInterval": {
+        "message": "동기화 간격",
+        "description": ""
+    },
+    "syncMode": {
+        "message": "동기화 모드",
+        "description": ""
+    },
+    "conflictMode": {
+        "message": "충돌 모드",
+        "description": ""
+    },
+    "storageType": {
+        "message": "유형",
+        "description": ""
+    },
+    "webdav": {
+        "message": "WebDAV",
+        "description": ""
+    },
+    "syncConflict": {
+        "message": "동기화 충돌",
+        "description": ""
+    },
+    "conflictsDetected": {
+        "message": "개의 충돌이 감지됨",
+        "description": ""
+    },
+    "export": {
+        "message": "내보내기",
+        "description": ""
+    },
+    "import": {
+        "message": "가져오기",
+        "description": ""
+    },
+    "githubGist": {
+        "message": "GitHub Gist",
+        "description": ""
+    },
+    "getToken": {
+        "message": "토큰 가져오기",
+        "description": ""
+    },
+    "enableAutoSync": {
+        "message": "자동 동기화 사용",
+        "description": ""
+    },
+    "syncModeTimer": {
+        "message": "타이머",
+        "description": ""
+    },
+    "syncModeEvent": {
+        "message": "이벤트",
+        "description": ""
+    },
+    "syncModeHybrid": {
+        "message": "하이브리드",
+        "description": ""
+    },
+    "interval15": {
+        "message": "15분",
+        "description": ""
+    },
+    "interval30": {
+        "message": "30분",
+        "description": ""
+    },
+    "interval60": {
+        "message": "1시간",
+        "description": ""
+    },
+    "interval360": {
+        "message": "6시간",
+        "description": ""
+    },
+    "interval1440": {
+        "message": "24시간",
+        "description": ""
+    },
+    "conflictAuto": {
+        "message": "자동 병합",
+        "description": ""
+    },
+    "conflictPrompt": {
+        "message": "확인 후 처리",
+        "description": ""
+    },
+    "storageService": {
+        "message": "저장 서비스",
+        "description": ""
+    },
+    "webdavUrl": {
+        "message": "WebDAV URL",
+        "description": ""
+    },
+    "webdavUsername": {
+        "message": "WebDAV 사용자 이름",
+        "description": ""
+    },
+    "webdavPassword": {
+        "message": "WebDAV 비밀번호",
+        "description": ""
+    },
+    "webdavPath": {
+        "message": "WebDAV 경로",
+        "description": ""
+    },
+    "testWebDAVConnection": {
+        "message": "WebDAV 연결 테스트",
+        "description": ""
+    },
+    "testing": {
+        "message": "테스트 중...",
+        "description": ""
+    },
+    "exportBookmarks": {
+        "message": "북마크 내보내기",
+        "description": ""
+    },
+    "importBookmarks": {
+        "message": "북마크 가져오기",
+        "description": ""
+    },
+    "intervalSync": {
+        "message": "타이머 동기화",
+        "description": ""
+    },
+    "intervalSyncDesc": {
+        "message": "설정한 간격으로 북마크를 자동으로 동기화합니다",
+        "description": ""
+    },
+    "eventSync": {
+        "message": "이벤트 동기화",
+        "description": ""
+    },
+    "eventSyncDesc": {
+        "message": "브라우저 시작 시 또는 북마크 변경(생성/수정/삭제) 시 동기화합니다",
+        "description": ""
+    },
+    "interval720": {
+        "message": "12시간",
+        "description": ""
+    },
+    "local": {
+        "message": "로컬",
+        "description": "Local bookmarks label"
+    },
+    "remote": {
+        "message": "원격",
+        "description": "Remote bookmarks label"
+    },
+    "validationError": {
+        "message": "유효성 검사 오류",
+        "description": "Validation error header"
+    },
+    "githubTokenRequired": {
+        "message": "GitHub 토큰은 비워둘 수 없습니다",
+        "description": ""
+    },
+    "gistIdRequired": {
+        "message": "Gist ID는 비워둘 수 없습니다",
+        "description": ""
+    },
+    "webdavUrlRequired": {
+        "message": "WebDAV URL은 비워둘 수 없습니다",
+        "description": ""
+    },
+    "webdavUsernameRequired": {
+        "message": "WebDAV 사용자 이름은 비워둘 수 없습니다",
+        "description": ""
+    },
+    "webdavPasswordRequired": {
+        "message": "WebDAV 비밀번호는 비워둘 수 없습니다",
+        "description": ""
+    },
+    "backupManagement": {
+        "message": "백업 관리",
+        "description": ""
+    },
+    "enableAutoBackup": {
+        "message": "자동 백업 사용",
+        "description": ""
+    },
+    "maxBackups": {
+        "message": "최대 백업 수",
+        "description": ""
+    },
+    "refreshBackupList": {
+        "message": "백업 목록 새로 고침",
+        "description": ""
+    },
+    "backupDate": {
+        "message": "백업 날짜",
+        "description": ""
+    },
+    "bookmarkCount": {
+        "message": "북마크",
+        "description": ""
+    },
+    "fileSize": {
+        "message": "크기",
+        "description": ""
+    },
+    "actions": {
+        "message": "작업",
+        "description": ""
+    },
+    "restore": {
+        "message": "복원",
+        "description": ""
+    },
+    "download": {
+        "message": "다운로드",
+        "description": ""
+    },
+    "delete": {
+        "message": "삭제",
+        "description": ""
+    },
+    "noBackups": {
+        "message": "백업이 없습니다",
+        "description": ""
+    },
+    "confirmRestore": {
+        "message": "복원 확인",
+        "description": ""
+    },
+    "confirmRestoreDesc": {
+        "message": "선택한 백업으로 북마크를 복원하시겠습니까? 현재 북마크는 대체됩니다.",
+        "description": ""
+    },
+    "cancel": {
+        "message": "취소",
+        "description": ""
+    },
+    "confirmRestoreButton": {
+        "message": "복원 확인",
+        "description": ""
+    },
+    "backupHistory": {
+        "message": "백업 기록",
+        "description": ""
+    },
+    "localCache": {
+        "message": "로컬 캐시",
+        "description": ""
+    },
+    "current": {
+        "message": "현재",
+        "description": ""
+    },
+    "backupSource": {
+        "message": "소스",
+        "description": ""
+    },
+    "backupTime": {
+        "message": "백업 시간",
+        "description": ""
+    },
+    "debounceTime": {
+        "message": "디바운스 시간 (ms)",
+        "description": ""
+    },
+    "restoreSuccess": {
+        "message": "백업이 복원되었습니다",
+        "description": ""
+    },
+    "importSuccess": {
+        "message": "북마크 $COUNT$개를 성공적으로 가져왔습니다",
+        "description": "Success message for import",
+        "placeholders": {
+            "COUNT": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "importFailed": {
+        "message": "북마크 가져오기 실패: $ERROR$",
+        "description": "Error message for import failure",
+        "placeholders": {
+            "ERROR": {
+                "content": "$1",
+                "example": "Invalid file format"
+            }
+        }
+    },
+    "webdavFieldsRequired": {
+        "message": "WebDAV 항목을 모두 입력해 주세요",
+        "description": ""
+    },
+    "loading": {
+        "message": "로드 중...",
+        "description": ""
+    },
+    "loadingBackupData": {
+        "message": "백업 데이터를 로드하는 중...",
+        "description": ""
+    },
+    "failedToLoadBackupData": {
+        "message": "백업 데이터를 로드하지 못했습니다",
+        "description": ""
+    },
+    "failedToRestoreBackup": {
+        "message": "백업을 복원하지 못했습니다",
+        "description": ""
+    },
+    "settingsSavedSuccess": {
+        "message": "설정이 저장되었습니다",
+        "description": ""
+    },
+    "saving": {
+        "message": "저장 중...",
+        "description": ""
+    },
+    "noBackupsHint": {
+        "message": "백업이 없습니다. \"백업 목록 새로 고침\"을 클릭하여 데이터를 불러오세요.",
+        "description": ""
+    },
+    "bookmarkActions": {
+        "message": "북마크 작업",
+        "description": "Aria label for popup menu"
+    },
+    "bookmarkCounts": {
+        "message": "북마크 수",
+        "description": "Aria label for bookmark counts section"
+    },
+    "noBackupRecords": {
+        "message": "백업 기록이 없습니다. 동기화 시 자동으로 생성됩니다.",
+        "description": ""
+    },
+    "restoreBackup": {
+        "message": "백업 복원",
+        "description": ""
+    },
+    "restoring": {
+        "message": "북마크를 복원하는 중...",
+        "description": ""
+    },
+    "restoreFailed": {
+        "message": "백업 복원에 실패했습니다.",
+        "description": ""
+    },
+    "confirmRestoreBackup": {
+        "message": "이 백업을 복원하시겠습니까? 현재 북마크는 대체됩니다.",
+        "description": ""
+    },
+    "confirmDeleteBackup": {
+        "message": "이 백업을 삭제하시겠습니까?",
+        "description": ""
+    },
+    "weakPasswordWarning": {
+        "message": "약한 비밀번호: 대소문자, 숫자, 특수문자를 포함해 12자 이상이어야 합니다",
+        "description": "Warning message for weak master password"
+    },
+    "githubTokenPlaceholder": {
+        "message": "GitHub 토큰",
+        "description": "Placeholder for GitHub token input"
+    },
+    "gistIdPlaceholder": {
+        "message": "Gist ID",
+        "description": "Placeholder for Gist ID input"
+    },
+    "gistFileNamePlaceholder": {
+        "message": "Gist 파일명",
+        "description": "Placeholder for Gist file name input"
+    },
+    "webdavUrlPlaceholder": {
+        "message": "https://your-nas.com/remote.php/dav/files/username/",
+        "description": "Placeholder for WebDAV URL input"
+    },
+    "webdavUsernamePlaceholder": {
+        "message": "사용자 이름",
+        "description": "Placeholder for WebDAV username input"
+    },
+    "webdavPasswordPlaceholder": {
+        "message": "비밀번호",
+        "description": "Placeholder for WebDAV password input"
+    },
+    "webdavPathPlaceholder": {
+        "message": "/bookmarks.json",
+        "description": "Placeholder for WebDAV path input"
+    },
+    "partialFailure": {
+        "message": "일부 실패와 함께 완료됨",
+        "description": "Download/restore finished but some bookmarks failed to be recreated"
+    },
+    "masterPasswordHint": {
+        "message": "마스터 비밀번호가 없으면 자격 증명은 (공개된) 확장 프로그램 ID에서 파생한 키로만 암호화되어 보호가 약합니다. 실질적인 보호를 위해 마스터 비밀번호를 설정하세요.",
+        "description": "Security boundary hint for the optional master password"
+    },
+    "webdavPermissionDenied": {
+        "message": "WebDAV 호스트 권한이 거부되었습니다. 권한이 없으면 확장 프로그램이 WebDAV 서버에 접근할 수 없습니다.",
+        "description": "Shown when the user denies the WebDAV origin permission request"
+    },
+    "syncNow": {
+        "message": "스마트 동기화(병합)",
+        "description": "Popup menu item that runs the three-way merge sync"
+    },
+    "syncNowDesc": {
+        "message": "로컬과 원격의 북마크 변경 사항을 병합합니다",
+        "description": "Tooltip for the Smart Sync menu item"
+    },
+    "syncRunning": {
+        "message": "동기화 중…",
+        "description": "Shown in the popup footer while a sync is running"
+    },
+    "syncDone": {
+        "message": "동기화 완료",
+        "description": "Shown after a successful sync"
+    },
+    "syncFailedLabel": {
+        "message": "동기화 실패",
+        "description": "Shown after a failed sync"
+    },
+    "syncSkipped": {
+        "message": "동기화 건너뜀(이미 실행 중)",
+        "description": "Shown when a sync was skipped"
+    },
+    "syncConflicts": {
+        "message": "개의 충돌 해결됨",
+        "description": "Appended to sync result when conflicts were auto-resolved"
+    },
+    "confirmDownload": {
+        "message": "다운로드하면 로컬 북마크를 모두 지우고 원격 복사본으로 다시 구성합니다. 계속하시겠습니까?",
+        "description": "Confirmation before the destructive download action"
+    },
+    "lastSyncLabel": {
+        "message": "마지막 동기화",
+        "description": "Label for the last sync time in the footer"
+    },
+    "testGithubConnection": {
+        "message": "GitHub 연결 테스트",
+        "description": "Button to verify GitHub token and gist access"
+    },
+    "githubConnectionOk": {
+        "message": "GitHub 연결 정상",
+        "description": "GitHub connectivity test succeeded"
+    },
+    "githubConnectionFailed": {
+        "message": "GitHub 연결 실패",
+        "description": "GitHub connectivity test failed"
+    },
+    "webdavUrlInvalid": {
+        "message": "WebDAV URL은 유효한 절대 URL이어야 합니다(예: https://host/dav/)",
+        "description": "WebDAV URL format validation error"
+    },
+    "error_AUTH_TOKEN_MISSING": {
+        "message": "GitHub 토큰이 없습니다. 설정 페이지에서 입력해 주세요.",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_MISSING"
+    },
+    "error_AUTH_TOKEN_INVALID": {
+        "message": "GitHub 토큰이 잘못되었거나 만료되었습니다. 다시 입력해 주세요.",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_INVALID"
+    },
+    "error_GIST_ID_MISSING": {
+        "message": "Gist ID가 없습니다. 설정 페이지에서 입력해 주세요.",
+        "description": "User-facing message for ErrorCode GIST_ID_MISSING"
+    },
+    "error_FILE_NAME_MISSING": {
+        "message": "동기화 파일 이름이 없습니다.",
+        "description": "User-facing message for ErrorCode FILE_NAME_MISSING"
+    },
+    "error_NETWORK_ERROR": {
+        "message": "네트워크 오류입니다. 연결을 확인하고 다시 시도해 주세요.",
+        "description": "User-facing message for ErrorCode NETWORK_ERROR"
+    },
+    "error_REQUEST_TIMEOUT": {
+        "message": "요청 시간이 초과되었습니다. 나중에 다시 시도해 주세요.",
+        "description": "User-facing message for ErrorCode REQUEST_TIMEOUT"
+    },
+    "error_RATE_LIMIT": {
+        "message": "API 요청이 제한되었습니다. 자동으로 재시도합니다.",
+        "description": "User-facing message for ErrorCode RATE_LIMIT"
+    },
+    "error_RATE_LIMIT_EXCEEDED": {
+        "message": "API 요청 한도를 초과했습니다. 나중에 다시 시도해 주세요.",
+        "description": "User-facing message for ErrorCode RATE_LIMIT_EXCEEDED"
+    },
+    "error_FILE_NOT_FOUND": {
+        "message": "원격 동기화 파일이 없습니다. 한 번 업로드하면 생성됩니다.",
+        "description": "User-facing message for ErrorCode FILE_NOT_FOUND"
+    },
+    "error_EMPTY_GIST_FILE": {
+        "message": "원격 동기화 파일이 비어 있습니다.",
+        "description": "User-facing message for ErrorCode EMPTY_GIST_FILE"
+    },
+    "error_GIST_FILE_TRUNCATED": {
+        "message": "원격 파일이 잘려 있어 완전히 읽을 수 없습니다.",
+        "description": "User-facing message for ErrorCode GIST_FILE_TRUNCATED"
+    },
+    "error_SYNC_DATA_CORRUPTED": {
+        "message": "원격 동기화 데이터가 손상되었습니다.",
+        "description": "User-facing message for ErrorCode SYNC_DATA_CORRUPTED"
+    },
+    "error_INVALID_DATA_FORMAT": {
+        "message": "원격 데이터 형식을 인식할 수 없습니다.",
+        "description": "User-facing message for ErrorCode INVALID_DATA_FORMAT"
+    },
+    "error_SYNC_FAILED": {
+        "message": "동기화에 실패했습니다.",
+        "description": "User-facing message for ErrorCode SYNC_FAILED"
+    },
+    "error_SYNC_IN_PROGRESS": {
+        "message": "이미 동기화가 진행 중입니다.",
+        "description": "User-facing message for ErrorCode SYNC_IN_PROGRESS"
+    },
+    "error_MERGE_FAILED": {
+        "message": "북마크 병합에 실패했습니다.",
+        "description": "User-facing message for ErrorCode MERGE_FAILED"
+    },
+    "error_MERGE_CONFLICT": {
+        "message": "동기화 충돌이 감지되었습니다.",
+        "description": "User-facing message for ErrorCode MERGE_CONFLICT"
+    },
+    "error_WEBDAV_AUTH_FAILED": {
+        "message": "WebDAV 인증에 실패했습니다. 사용자 이름과 비밀번호를 확인해 주세요.",
+        "description": "User-facing message for ErrorCode WEBDAV_AUTH_FAILED"
+    },
+    "error_WEBDAV_READ_ERROR": {
+        "message": "WebDAV 읽기에 실패했습니다.",
+        "description": "User-facing message for ErrorCode WEBDAV_READ_ERROR"
+    },
+    "error_WEBDAV_WRITE_ERROR": {
+        "message": "WebDAV 쓰기에 실패했습니다.",
+        "description": "User-facing message for ErrorCode WEBDAV_WRITE_ERROR"
+    },
+    "error_WEBDAV_FILE_NOT_FOUND": {
+        "message": "WebDAV 파일이 없습니다. 한 번 업로드하면 생성됩니다.",
+        "description": "User-facing message for ErrorCode WEBDAV_FILE_NOT_FOUND"
+    },
+    "error_WEBDAV_CONNECTION_FAILED": {
+        "message": "WebDAV 서버에 연결할 수 없습니다.",
+        "description": "User-facing message for ErrorCode WEBDAV_CONNECTION_FAILED"
+    },
+    "error_IMPORT_ERROR": {
+        "message": "북마크 가져오기에 실패했습니다.",
+        "description": "User-facing message for ErrorCode IMPORT_ERROR"
+    },
+    "error_EXPORT_ERROR": {
+        "message": "북마크 내보내기에 실패했습니다.",
+        "description": "User-facing message for ErrorCode EXPORT_ERROR"
+    },
+    "error_PARSE_ERROR": {
+        "message": "데이터 해석에 실패했습니다.",
+        "description": "User-facing message for ErrorCode PARSE_ERROR"
+    },
+    "error_VALIDATION_ERROR": {
+        "message": "설정이 잘못되었습니다. 입력 내용을 확인해 주세요.",
+        "description": "User-facing message for ErrorCode VALIDATION_ERROR"
+    },
+    "error_UNKNOWN_ERROR": {
+        "message": "작업에 실패했습니다. 나중에 다시 시도해 주세요.",
+        "description": "User-facing message for ErrorCode UNKNOWN_ERROR"
     }
 }

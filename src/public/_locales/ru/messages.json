@@ -118,5 +118,565 @@
     "saveSettings": {
         "message": "Сохранить настройки",
         "description": ""
+    },
+    "autoSync": {
+        "message": "Автосинхронизация",
+        "description": ""
+    },
+    "syncInterval": {
+        "message": "Интервал синхронизации",
+        "description": ""
+    },
+    "syncMode": {
+        "message": "Режим синхронизации",
+        "description": ""
+    },
+    "conflictMode": {
+        "message": "Режим обработки конфликтов",
+        "description": ""
+    },
+    "storageType": {
+        "message": "Тип",
+        "description": ""
+    },
+    "webdav": {
+        "message": "WebDAV",
+        "description": ""
+    },
+    "syncConflict": {
+        "message": "Конфликт синхронизации",
+        "description": ""
+    },
+    "conflictsDetected": {
+        "message": "конфликтов обнаружено",
+        "description": ""
+    },
+    "export": {
+        "message": "Экспорт",
+        "description": ""
+    },
+    "import": {
+        "message": "Импорт",
+        "description": ""
+    },
+    "githubGist": {
+        "message": "GitHub Gist",
+        "description": ""
+    },
+    "getToken": {
+        "message": "Получить токен",
+        "description": ""
+    },
+    "enableAutoSync": {
+        "message": "Включить автосинхронизацию",
+        "description": ""
+    },
+    "syncModeTimer": {
+        "message": "По таймеру",
+        "description": ""
+    },
+    "syncModeEvent": {
+        "message": "По событиям",
+        "description": ""
+    },
+    "syncModeHybrid": {
+        "message": "Гибридный",
+        "description": ""
+    },
+    "interval15": {
+        "message": "15 минут",
+        "description": ""
+    },
+    "interval30": {
+        "message": "30 минут",
+        "description": ""
+    },
+    "interval60": {
+        "message": "1 час",
+        "description": ""
+    },
+    "interval360": {
+        "message": "6 часов",
+        "description": ""
+    },
+    "interval1440": {
+        "message": "24 часа",
+        "description": ""
+    },
+    "conflictAuto": {
+        "message": "Автообъединение",
+        "description": ""
+    },
+    "conflictPrompt": {
+        "message": "Спрашивать",
+        "description": ""
+    },
+    "storageService": {
+        "message": "Сервис хранения",
+        "description": ""
+    },
+    "webdavUrl": {
+        "message": "URL WebDAV",
+        "description": ""
+    },
+    "webdavUsername": {
+        "message": "Имя пользователя WebDAV",
+        "description": ""
+    },
+    "webdavPassword": {
+        "message": "Пароль WebDAV",
+        "description": ""
+    },
+    "webdavPath": {
+        "message": "Путь WebDAV",
+        "description": ""
+    },
+    "testWebDAVConnection": {
+        "message": "Проверить соединение WebDAV",
+        "description": ""
+    },
+    "testing": {
+        "message": "Проверка...",
+        "description": ""
+    },
+    "exportBookmarks": {
+        "message": "Экспорт закладок",
+        "description": ""
+    },
+    "importBookmarks": {
+        "message": "Импорт закладок",
+        "description": ""
+    },
+    "intervalSync": {
+        "message": "Синхронизация по таймеру",
+        "description": ""
+    },
+    "intervalSyncDesc": {
+        "message": "Автоматически синхронизировать закладки через заданные интервалы",
+        "description": ""
+    },
+    "eventSync": {
+        "message": "Синхронизация по событиям",
+        "description": ""
+    },
+    "eventSyncDesc": {
+        "message": "Синхронизация при запуске браузера или изменении закладок (создание/изменение/удаление)",
+        "description": ""
+    },
+    "interval720": {
+        "message": "12 часов",
+        "description": ""
+    },
+    "local": {
+        "message": "Локально",
+        "description": "Local bookmarks label"
+    },
+    "remote": {
+        "message": "Удалённо",
+        "description": "Remote bookmarks label"
+    },
+    "validationError": {
+        "message": "Ошибка проверки",
+        "description": "Validation error header"
+    },
+    "githubTokenRequired": {
+        "message": "GitHub Token не может быть пустым",
+        "description": ""
+    },
+    "gistIdRequired": {
+        "message": "Gist ID не может быть пустым",
+        "description": ""
+    },
+    "webdavUrlRequired": {
+        "message": "WebDAV URL не может быть пустым",
+        "description": ""
+    },
+    "webdavUsernameRequired": {
+        "message": "Имя пользователя WebDAV не может быть пустым",
+        "description": ""
+    },
+    "webdavPasswordRequired": {
+        "message": "Пароль WebDAV не может быть пустым",
+        "description": ""
+    },
+    "backupManagement": {
+        "message": "Управление резервными копиями",
+        "description": ""
+    },
+    "enableAutoBackup": {
+        "message": "Включить автоматическое резервное копирование",
+        "description": ""
+    },
+    "maxBackups": {
+        "message": "Максимум копий",
+        "description": ""
+    },
+    "refreshBackupList": {
+        "message": "Обновить список копий",
+        "description": ""
+    },
+    "backupDate": {
+        "message": "Дата копии",
+        "description": ""
+    },
+    "bookmarkCount": {
+        "message": "Закладки",
+        "description": ""
+    },
+    "fileSize": {
+        "message": "Размер",
+        "description": ""
+    },
+    "actions": {
+        "message": "Действия",
+        "description": ""
+    },
+    "restore": {
+        "message": "Восстановить",
+        "description": ""
+    },
+    "download": {
+        "message": "Скачать",
+        "description": ""
+    },
+    "delete": {
+        "message": "Удалить",
+        "description": ""
+    },
+    "noBackups": {
+        "message": "Резервные копии не найдены",
+        "description": ""
+    },
+    "confirmRestore": {
+        "message": "Подтвердите восстановление",
+        "description": ""
+    },
+    "confirmRestoreDesc": {
+        "message": "Вы уверены, что хотите восстановить закладки из выбранной резервной копии? Текущие закладки будут заменены.",
+        "description": ""
+    },
+    "cancel": {
+        "message": "Отмена",
+        "description": ""
+    },
+    "confirmRestoreButton": {
+        "message": "Подтвердить восстановление",
+        "description": ""
+    },
+    "backupHistory": {
+        "message": "История копий",
+        "description": ""
+    },
+    "localCache": {
+        "message": "Локальный кэш",
+        "description": ""
+    },
+    "current": {
+        "message": "Текущая",
+        "description": ""
+    },
+    "backupSource": {
+        "message": "Источник",
+        "description": ""
+    },
+    "backupTime": {
+        "message": "Время копии",
+        "description": ""
+    },
+    "debounceTime": {
+        "message": "Время задержки (мс)",
+        "description": ""
+    },
+    "restoreSuccess": {
+        "message": "Резервная копия успешно восстановлена",
+        "description": ""
+    },
+    "importSuccess": {
+        "message": "$COUNT$ закладок успешно импортировано",
+        "description": "Success message for import",
+        "placeholders": {
+            "COUNT": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "importFailed": {
+        "message": "Не удалось импортировать закладки: $ERROR$",
+        "description": "Error message for import failure",
+        "placeholders": {
+            "ERROR": {
+                "content": "$1",
+                "example": "Invalid file format"
+            }
+        }
+    },
+    "webdavFieldsRequired": {
+        "message": "Заполните все поля WebDAV",
+        "description": ""
+    },
+    "loading": {
+        "message": "Загрузка...",
+        "description": ""
+    },
+    "loadingBackupData": {
+        "message": "Загрузка данных резервных копий...",
+        "description": ""
+    },
+    "failedToLoadBackupData": {
+        "message": "Не удалось загрузить данные резервных копий",
+        "description": ""
+    },
+    "failedToRestoreBackup": {
+        "message": "Не удалось восстановить резервную копию",
+        "description": ""
+    },
+    "settingsSavedSuccess": {
+        "message": "Настройки успешно сохранены",
+        "description": ""
+    },
+    "saving": {
+        "message": "Сохранение...",
+        "description": ""
+    },
+    "noBackupsHint": {
+        "message": "Резервные копии не найдены. Нажмите «Обновить список копий», чтобы загрузить данные.",
+        "description": ""
+    },
+    "bookmarkActions": {
+        "message": "Действия с закладками",
+        "description": "Aria label for popup menu"
+    },
+    "bookmarkCounts": {
+        "message": "Количество закладок",
+        "description": "Aria label for bookmark counts section"
+    },
+    "noBackupRecords": {
+        "message": "Записей резервных копий нет. Копии создаются автоматически при синхронизации.",
+        "description": ""
+    },
+    "restoreBackup": {
+        "message": "Восстановить копию",
+        "description": ""
+    },
+    "restoring": {
+        "message": "Восстановление закладок...",
+        "description": ""
+    },
+    "restoreFailed": {
+        "message": "Не удалось восстановить резервную копию.",
+        "description": ""
+    },
+    "confirmRestoreBackup": {
+        "message": "Вы уверены, что хотите восстановить эту резервную копию? Текущие закладки будут заменены.",
+        "description": ""
+    },
+    "confirmDeleteBackup": {
+        "message": "Удалить эту резервную копию?",
+        "description": ""
+    },
+    "weakPasswordWarning": {
+        "message": "Слабый пароль: требуется не менее 12 символов, включая заглавные и строчные буквы, цифры и специальные символы",
+        "description": "Warning message for weak master password"
+    },
+    "githubTokenPlaceholder": {
+        "message": "GitHub Token",
+        "description": "Placeholder for GitHub token input"
+    },
+    "gistIdPlaceholder": {
+        "message": "Gist ID",
+        "description": "Placeholder for Gist ID input"
+    },
+    "gistFileNamePlaceholder": {
+        "message": "Имя файла Gist",
+        "description": "Placeholder for Gist file name input"
+    },
+    "webdavUrlPlaceholder": {
+        "message": "https://your-nas.com/remote.php/dav/files/username/",
+        "description": "Placeholder for WebDAV URL input"
+    },
+    "webdavUsernamePlaceholder": {
+        "message": "Имя пользователя",
+        "description": "Placeholder for WebDAV username input"
+    },
+    "webdavPasswordPlaceholder": {
+        "message": "Пароль",
+        "description": "Placeholder for WebDAV password input"
+    },
+    "webdavPathPlaceholder": {
+        "message": "/bookmarks.json",
+        "description": "Placeholder for WebDAV path input"
+    },
+    "partialFailure": {
+        "message": "Завершено с ошибками",
+        "description": "Download/restore finished but some bookmarks failed to be recreated"
+    },
+    "masterPasswordHint": {
+        "message": "Без мастер-пароля учётные данные шифруются только ключом, полученным из (публичного) ID расширения, — защита слабая. Задайте мастер-пароль для надёжной защиты.",
+        "description": "Security boundary hint for the optional master password"
+    },
+    "webdavPermissionDenied": {
+        "message": "Разрешение для узла WebDAV отклонено. Без него расширение не может обращаться к серверу WebDAV.",
+        "description": "Shown when the user denies the WebDAV origin permission request"
+    },
+    "syncNow": {
+        "message": "Умная синхронизация (объединение)",
+        "description": "Popup menu item that runs the three-way merge sync"
+    },
+    "syncNowDesc": {
+        "message": "Объединить локальные и удалённые изменения закладок",
+        "description": "Tooltip for the Smart Sync menu item"
+    },
+    "syncRunning": {
+        "message": "Идёт синхронизация…",
+        "description": "Shown in the popup footer while a sync is running"
+    },
+    "syncDone": {
+        "message": "Синхронизация завершена",
+        "description": "Shown after a successful sync"
+    },
+    "syncFailedLabel": {
+        "message": "Сбой синхронизации",
+        "description": "Shown after a failed sync"
+    },
+    "syncSkipped": {
+        "message": "Синхронизация пропущена (уже выполняется)",
+        "description": "Shown when a sync was skipped"
+    },
+    "syncConflicts": {
+        "message": "конфликтов разрешено",
+        "description": "Appended to sync result when conflicts were auto-resolved"
+    },
+    "confirmDownload": {
+        "message": "При скачивании ВСЕ локальные закладки будут УДАЛЕНЫ и созданы заново из удалённой копии. Продолжить?",
+        "description": "Confirmation before the destructive download action"
+    },
+    "lastSyncLabel": {
+        "message": "Последняя синхронизация",
+        "description": "Label for the last sync time in the footer"
+    },
+    "testGithubConnection": {
+        "message": "Проверить соединение с GitHub",
+        "description": "Button to verify GitHub token and gist access"
+    },
+    "githubConnectionOk": {
+        "message": "Соединение с GitHub успешно",
+        "description": "GitHub connectivity test succeeded"
+    },
+    "githubConnectionFailed": {
+        "message": "Не удалось соединиться с GitHub",
+        "description": "GitHub connectivity test failed"
+    },
+    "webdavUrlInvalid": {
+        "message": "WebDAV URL должен быть корректным абсолютным URL (например, https://host/dav/)",
+        "description": "WebDAV URL format validation error"
+    },
+    "error_AUTH_TOKEN_MISSING": {
+        "message": "Отсутствует GitHub Token. Укажите его на странице настроек.",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_MISSING"
+    },
+    "error_AUTH_TOKEN_INVALID": {
+        "message": "GitHub Token недействителен или истёк. Введите его заново.",
+        "description": "User-facing message for ErrorCode AUTH_TOKEN_INVALID"
+    },
+    "error_GIST_ID_MISSING": {
+        "message": "Отсутствует Gist ID. Укажите его на странице настроек.",
+        "description": "User-facing message for ErrorCode GIST_ID_MISSING"
+    },
+    "error_FILE_NAME_MISSING": {
+        "message": "Отсутствует имя файла синхронизации.",
+        "description": "User-facing message for ErrorCode FILE_NAME_MISSING"
+    },
+    "error_NETWORK_ERROR": {
+        "message": "Ошибка сети. Проверьте подключение и повторите попытку.",
+        "description": "User-facing message for ErrorCode NETWORK_ERROR"
+    },
+    "error_REQUEST_TIMEOUT": {
+        "message": "Истекло время ожидания запроса. Повторите попытку позже.",
+        "description": "User-facing message for ErrorCode REQUEST_TIMEOUT"
+    },
+    "error_RATE_LIMIT": {
+        "message": "Срабатывание лимита запросов API. Будет выполнена автоматическая повторная попытка.",
+        "description": "User-facing message for ErrorCode RATE_LIMIT"
+    },
+    "error_RATE_LIMIT_EXCEEDED": {
+        "message": "Превышен лимит запросов к API. Повторите попытку позже.",
+        "description": "User-facing message for ErrorCode RATE_LIMIT_EXCEEDED"
+    },
+    "error_FILE_NOT_FOUND": {
+        "message": "Удалённый файл синхронизации не найден. Выполните одну выгрузку, чтобы создать его.",
+        "description": "User-facing message for ErrorCode FILE_NOT_FOUND"
+    },
+    "error_EMPTY_GIST_FILE": {
+        "message": "Удалённый файл синхронизации пуст.",
+        "description": "User-facing message for ErrorCode EMPTY_GIST_FILE"
+    },
+    "error_GIST_FILE_TRUNCATED": {
+        "message": "Удалённый файл обрезан и не может быть прочитан полностью.",
+        "description": "User-facing message for ErrorCode GIST_FILE_TRUNCATED"
+    },
+    "error_SYNC_DATA_CORRUPTED": {
+        "message": "Удалённые данные синхронизации повреждены.",
+        "description": "User-facing message for ErrorCode SYNC_DATA_CORRUPTED"
+    },
+    "error_INVALID_DATA_FORMAT": {
+        "message": "Неизвестный формат удалённых данных.",
+        "description": "User-facing message for ErrorCode INVALID_DATA_FORMAT"
+    },
+    "error_SYNC_FAILED": {
+        "message": "Сбой синхронизации.",
+        "description": "User-facing message for ErrorCode SYNC_FAILED"
+    },
+    "error_SYNC_IN_PROGRESS": {
+        "message": "Синхронизация уже выполняется.",
+        "description": "User-facing message for ErrorCode SYNC_IN_PROGRESS"
+    },
+    "error_MERGE_FAILED": {
+        "message": "Не удалось объединить закладки.",
+        "description": "User-facing message for ErrorCode MERGE_FAILED"
+    },
+    "error_MERGE_CONFLICT": {
+        "message": "Обнаружены конфликты синхронизации.",
+        "description": "User-facing message for ErrorCode MERGE_CONFLICT"
+    },
+    "error_WEBDAV_AUTH_FAILED": {
+        "message": "Ошибка аутентификации WebDAV. Проверьте имя пользователя и пароль.",
+        "description": "User-facing message for ErrorCode WEBDAV_AUTH_FAILED"
+    },
+    "error_WEBDAV_READ_ERROR": {
+        "message": "Не удалось прочитать данные с WebDAV.",
+        "description": "User-facing message for ErrorCode WEBDAV_READ_ERROR"
+    },
+    "error_WEBDAV_WRITE_ERROR": {
+        "message": "Не удалось записать данные на WebDAV.",
+        "description": "User-facing message for ErrorCode WEBDAV_WRITE_ERROR"
+    },
+    "error_WEBDAV_FILE_NOT_FOUND": {
+        "message": "Файл WebDAV не найден. Выполните одну выгрузку, чтобы создать его.",
+        "description": "User-facing message for ErrorCode WEBDAV_FILE_NOT_FOUND"
+    },
+    "error_WEBDAV_CONNECTION_FAILED": {
+        "message": "Сервер WebDAV недоступен.",
+        "description": "User-facing message for ErrorCode WEBDAV_CONNECTION_FAILED"
+    },
+    "error_IMPORT_ERROR": {
+        "message": "Не удалось импортировать закладки.",
+        "description": "User-facing message for ErrorCode IMPORT_ERROR"
+    },
+    "error_EXPORT_ERROR": {
+        "message": "Не удалось экспортировать закладки.",
+        "description": "User-facing message for ErrorCode EXPORT_ERROR"
+    },
+    "error_PARSE_ERROR": {
+        "message": "Не удалось разобрать данные.",
+        "description": "User-facing message for ErrorCode PARSE_ERROR"
+    },
+    "error_VALIDATION_ERROR": {
+        "message": "Недопустимые настройки. Проверьте введённые данные.",
+        "description": "User-facing message for ErrorCode VALIDATION_ERROR"
+    },
+    "error_UNKNOWN_ERROR": {
+        "message": "Операция не выполнена. Повторите попытку позже.",
+        "description": "User-facing message for ErrorCode UNKNOWN_ERROR"
     }
 }

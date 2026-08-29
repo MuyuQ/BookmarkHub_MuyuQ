@@ -550,5 +550,141 @@
     "error_UNKNOWN_ERROR": {
         "message": "操作失败，请稍后重试。",
         "description": "User-facing message for ErrorCode UNKNOWN_ERROR"
+    },
+    "syncConflict": {
+        "message": "同步冲突",
+        "description": ""
+    },
+    "conflictsDetected": {
+        "message": "检测到冲突",
+        "description": ""
+    },
+    "export": {
+        "message": "导出",
+        "description": ""
+    },
+    "import": {
+        "message": "导入",
+        "description": ""
+    },
+    "backupManagement": {
+        "message": "备份管理",
+        "description": ""
+    },
+    "enableAutoBackup": {
+        "message": "启用自动备份",
+        "description": ""
+    },
+    "maxBackups": {
+        "message": "最大备份数",
+        "description": ""
+    },
+    "refreshBackupList": {
+        "message": "刷新备份列表",
+        "description": ""
+    },
+    "backupDate": {
+        "message": "备份时间",
+        "description": ""
+    },
+    "fileSize": {
+        "message": "文件大小",
+        "description": ""
+    },
+    "download": {
+        "message": "下载",
+        "description": ""
+    },
+    "noBackups": {
+        "message": "暂无备份",
+        "description": ""
+    },
+    "confirmRestore": {
+        "message": "确认恢复",
+        "description": ""
+    },
+    "confirmRestoreDesc": {
+        "message": "恢复将替换当前全部书签，请确认备份时间与数量。",
+        "description": ""
+    },
+    "confirmRestoreButton": {
+        "message": "确认恢复此备份",
+        "description": ""
+    },
+    "localCache": {
+        "message": "本地缓存",
+        "description": ""
+    },
+    "current": {
+        "message": "当前",
+        "description": ""
+    },
+    "backupSource": {
+        "message": "备份来源",
+        "description": ""
+    },
+    "debounceTime": {
+        "message": "防抖时间",
+        "description": ""
+    },
+    "importSuccess": {
+        "message": "成功导入 $COUNT$ 个书签",
+        "description": "Success message for import",
+        "placeholders": {
+            "COUNT": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "importFailed": {
+        "message": "导入失败：$ERROR$",
+        "description": "Error message for import failure",
+        "placeholders": {
+            "ERROR": {
+                "content": "$1",
+                "example": "Invalid file format"
+            }
+        }
+    },
+    "webdavFieldsRequired": {
+        "message": "WebDAV 地址、用户名和密码均需填写",
+        "description": ""
+    },
+    "loading": {
+        "message": "加载中…",
+        "description": ""
+    },
+    "loadingBackupData": {
+        "message": "正在加载备份数据…",
+        "description": ""
+    },
+    "failedToLoadBackupData": {
+        "message": "加载备份数据失败",
+        "description": ""
+    },
+    "failedToRestoreBackup": {
+        "message": "恢复备份失败",
+        "description": ""
+    },
+    "settingsSavedSuccess": {
+        "message": "设置已保存",
+        "description": ""
+    },
+    "saving": {
+        "message": "保存中…",
+        "description": ""
+    },
+    "noBackupsHint": {
+        "message": "暂无备份。同步后会自动创建备份，也可点击\"刷新备份列表\"查看。",
+        "description": ""
+    },
+    "bookmarkActions": {
+        "message": "书签操作",
+        "description": "Aria label for popup menu"
+    },
+    "bookmarkCounts": {
+        "message": "书签数量",
+        "description": "Aria label for bookmark counts section"
     }
 }

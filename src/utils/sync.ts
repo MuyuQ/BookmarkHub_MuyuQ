@@ -491,6 +491,7 @@ async function saveSyncStatus(result: SyncResult): Promise<void> {
         lastSyncDirection: result.direction,
         [STORAGE_KEYS.LAST_SYNC_STATUS]: result.status,
         [STORAGE_KEYS.LAST_SYNC_ERROR]: result.errorMessage || '',
+        [STORAGE_KEYS.LAST_SYNC_CONFLICTS]: result.conflictCount || 0,
         [STORAGE_KEYS.LOCAL_COUNT]: result.localCount,
         [STORAGE_KEYS.REMOTE_COUNT]: result.remoteCount
     });

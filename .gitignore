@@ -16,6 +16,14 @@ web-ext.config.ts
 dist/
 .worktrees
 
+# 工具产物与会话数据（不入库）
+coverage/
+.playwright-cli/
+.sisyphus/
+.superpowers/
+.claude/
+.git.corrupt.bak/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -6,10 +6,10 @@
     "sync bookmarks"
   ],
   "private": true,
-  "version": "0.7",
+  "version": "0.7.0",
   "type": "module",
   "author": "dudor",
-  "license": "",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",

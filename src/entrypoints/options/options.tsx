@@ -16,6 +16,8 @@ const Options: React.FC = () => {
     const [enableIntervalSync, setEnableIntervalSync] = useState(false);
     const [syncInterval, setSyncInterval] = useState(60);
     const [enableEventSync, setEnableEventSync] = useState(true);
+    // conflictMode 暂无 UI：prompt 模式缺少冲突裁决界面（见 docs/plans/2026-08-29 改进计划书 P0-7），
+    // 状态保留仅为透传已存储值，避免保存时被清空
     const [conflictMode, setConflictMode] = useState<'auto' | 'prompt'>('auto');
     const [storageType, setStorageType] = useState<'github' | 'webdav'>('github');
     const [webdavUrl, setWebdavUrl] = useState('');
@@ -242,10 +244,6 @@ const Options: React.FC = () => {
                         </Form.Group>
                         <Form.Group as={Row}>
                             <Col sm={12}><Form.Check id="enableEventSync" type="switch" label={browser.i18n.getMessage('eventSync')} checked={enableEventSync} onChange={(e) => setEnableEventSync(e.target.checked)} aria-label={browser.i18n.getMessage('eventSync')} /></Col>
-                        </Form.Group>
-                        <Form.Group as={Row}>
-                            <Form.Label column="sm" sm={3} lg={2} xs={3}>{browser.i18n.getMessage('conflictMode')}</Form.Label>
-                            <Col sm={9} lg={10} xs={9}><Form.Control as="select" value={conflictMode} onChange={(e) => setConflictMode(e.target.value as 'auto' | 'prompt')} size="sm"><option value="auto">{browser.i18n.getMessage('conflictAuto')}</option><option value="prompt">{browser.i18n.getMessage('conflictPrompt')}</option></Form.Control></Col>
                         </Form.Group>
                     </Card.Body>
                 </Card>

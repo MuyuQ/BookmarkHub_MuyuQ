@@ -302,7 +302,7 @@ export async function startAutoSync(): Promise<void> {
     
     // 定时同步模式 - 使用 Alarm API (MV3 兼容)
     if (setting.enableIntervalSync) {
-        const intervalMinutes = setting.syncInterval / 60; // 转换为分钟
+        const intervalMinutes = setting.syncInterval; // 存储值单位已是分钟（60/720/1440），无需换算
         if (browser.alarms) {
             browser.alarms.create(MV3_CONFIG.SYNC_ALARM_NAME, {
                 periodInMinutes: Math.max(intervalMinutes, 1), // Alarm API 最小间隔 1 分钟

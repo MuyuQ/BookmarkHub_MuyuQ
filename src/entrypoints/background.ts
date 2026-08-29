@@ -18,7 +18,8 @@ export default defineBackground(() => {
   optionsStorage.onChanged((newOptions, oldOptions) => {
     if (newOptions.enableAutoSync !== oldOptions.enableAutoSync ||
         newOptions.enableEventSync !== oldOptions.enableEventSync ||
-        newOptions.enableIntervalSync !== oldOptions.enableIntervalSync) {
+        newOptions.enableIntervalSync !== oldOptions.enableIntervalSync ||
+        newOptions.syncInterval !== oldOptions.syncInterval) {
       stopAutoSync();
       if (newOptions.enableAutoSync) {
         startAutoSync();

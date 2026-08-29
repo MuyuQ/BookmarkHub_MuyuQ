@@ -21,7 +21,8 @@
     "postinstall": "wxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "validate:locales": "node scripts/validate-locales.mjs"
   },
   "dependencies": {
     "bootstrap": "^4.6.0",

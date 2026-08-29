@@ -60,17 +60,21 @@ function findConflicts(
   remote: ChangeDetectionResult
 ): ConflictCandidate[] {
   const conflicts: ConflictCandidate[] = [];
-  
-  for (const l of local.changes) {
-    for (const r of remote.changes) {
-      if (l.bookmark.id === r.bookmark.id) {
-        if (l.type === 'created' && r.type === 'created') continue;
-        if (l.type === 'deleted' && r.type === 'deleted') continue;
-        conflicts.push({ local: l, remote: r });
-      }
-    }
+
+  // 以 Map 索引远程变更，避免 O(n×m) 双重循环
+  const remoteById = new Map<string, BookmarkChange>();
+  for (const r of remote.changes) {
+    remoteById.set(r.bookmark.id || '', r);
   }
-  
+
+  for (const l of local.changes) {
+    const r = remoteById.get(l.bookmark.id || '');
+    if (!r) continue;
+    if (l.type === 'created' && r.type === 'created') continue;
+    if (l.type === 'deleted' && r.type === 'deleted') continue;
+    conflicts.push({ local: l, remote: r });
+  }
+
   return conflicts;
 }
 
@@ -99,50 +103,19 @@ function resolveConflicts(
   });
 }
 
-function applyChanges(
-  base: BookmarkInfo[],
-  localChanges: ChangeDetectionResult,
-  resolved: ResolvedConflict[]
-): BookmarkInfo[] {
-  const result: BookmarkInfo[] = JSON.parse(JSON.stringify(base));
-  
-  const lostToRemote = (bookmarkId: string): boolean => {
-    const resolution = resolved.find(r => r.local.bookmark.id === bookmarkId);
-    return resolution !== undefined && resolution.winner === 'remote';
-  };
-  
-  for (const change of localChanges.created) {
-    if (!lostToRemote(change.bookmark.id!)) {
-      addBookmarkToTree(result, change.bookmark);
-    }
-  }
-  
-  for (const change of localChanges.modified) {
-    if (!lostToRemote(change.bookmark.id!)) {
-      updateBookmarkInTree(result, change.bookmark);
-    }
-  }
-  
-  for (const change of localChanges.deleted) {
-    if (!lostToRemote(change.bookmark.id!) && change.bookmark.id) {
-      removeBookmarkFromTree(result, change.bookmark.id);
-    }
-  }
-  
-  for (const change of localChanges.moved) {
-    if (!lostToRemote(change.bookmark.id!)) {
-      updateBookmarkInTree(result, change.bookmark);
-    }
-  }
-  
-  return result;
-}
 
 /**
  * 在树中按 index 排序插入书签
  * 保持书签的正确排序顺序
  */
 function addBookmarkToTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): void {
+    // 联合合并：同 ID 节点已存在时改为更新，避免重复插入
+    // （首次同步时本地与远程的根文件夹/共有书签会同时以"created"出现）
+    if (bookmark.id && findBookmarkById(tree, bookmark.id)) {
+      updateBookmarkInTree(tree, bookmark);
+      return;
+    }
+
     if (!bookmark.parentId) {
       insertSorted(tree, bookmark);
       return;
@@ -179,7 +152,13 @@ function updateBookmarkInTree(tree: BookmarkInfo[], bookmark: BookmarkInfo): voi
   if (!bookmark.id) return;
   const existing = findBookmarkById(tree, bookmark.id);
   if (existing) {
-    Object.assign(existing, bookmark);
+    // 保留已合并的子树：子节点变化由各自独立的变更条目处理，
+    // 整体覆盖 children 会丢失先前已合并进来的一方子节点
+    const { children, ...scalars } = bookmark;
+    Object.assign(existing, scalars);
+    if (!existing.children && children) {
+      existing.children = children;
+    }
   }
 }
 
@@ -248,34 +227,15 @@ function formatChangeSummary(local: ChangeDetectionResult, remote: ChangeDetecti
  * @returns 三向合并结果
  */
 export function threeWayMerge(params: ThreeWayMergeParams): ThreeWayMergeResult {
-  const { baseline, local, remote, localTombstones, remoteTombstones, conflictMode } = params;
+  const { local, remote, localTombstones, remoteTombstones, conflictMode } = params;
 
-  // 1. 如果没有基准点（首次同步），使用本地数据
-  if (!baseline || baseline.length === 0) {
-    // 合并本地和远程墓碑
-    const allTombstones = mergeTombstones(localTombstones, remoteTombstones);
-    const cleanedTombstones = cleanExpiredTombstones(allTombstones);
-
-    // 如果远程有数据，应使用远程数据（避免覆盖）
-    if (remote && remote.length > 0) {
-      logger.info('三向合并: 无基准点但远程有数据，使用远程数据');
-      return {
-        merged: remote,
-        tombstones: cleanedTombstones,
-        hasChanges: true,
-        conflicts: [],
-        changeSummary: '首次同步，使用远程数据'
-      };
-    }
-
-    logger.info('三向合并: 无基准点，使用本地数据');
-    return {
-      merged: local,
-      tombstones: cleanedTombstones,
-      hasChanges: true,
-      conflicts: [],
-      changeSummary: '首次同步，使用本地数据'
-    };
+  // 1. 无基准点 = 首次同步：以空基线执行"联合合并"
+  //    本地与远程的所有节点均视为新增，双方共有的节点（同稳定 ID）去重合并；
+  //    已存在的墓碑仍会过滤对应节点，防止复活。
+  //    注意不能把"远程缺失"当作删除——首次同步无法区分"从未有过"与"已删除"。
+  const baseline = params.baseline && params.baseline.length > 0 ? params.baseline : [];
+  if (baseline.length === 0) {
+    logger.info('三向合并: 无基准点，执行本地与远程联合合并（首次同步）');
   }
 
   logger.debug('三向合并: 开始检测变更', {

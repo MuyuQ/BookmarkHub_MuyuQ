@@ -104,7 +104,7 @@
         "description": ""
     },
     "storageType": {
-        "message": "Storage Type",
+        "message": "Type",
         "description": ""
     },
     "webdav": {
@@ -135,16 +135,8 @@
         "message": "Get Token",
         "description": ""
     },
-    "autoSync": {
-        "message": "Auto Sync",
-        "description": ""
-    },
     "enableAutoSync": {
         "message": "Enable Auto Sync",
-        "description": ""
-    },
-    "syncMode": {
-        "message": "Sync Mode",
         "description": ""
     },
     "syncModeTimer": {
@@ -157,10 +149,6 @@
     },
     "syncModeHybrid": {
         "message": "Hybrid",
-        "description": ""
-    },
-    "syncInterval": {
-        "message": "Sync Interval",
         "description": ""
     },
     "interval15": {
@@ -183,10 +171,6 @@
         "message": "24 hours",
         "description": ""
     },
-    "conflictMode": {
-        "message": "Conflict Mode",
-        "description": ""
-    },
     "conflictAuto": {
         "message": "Auto Merge",
         "description": ""
@@ -197,14 +181,6 @@
     },
     "storageService": {
         "message": "Storage Service",
-        "description": ""
-    },
-    "storageType": {
-        "message": "Type",
-        "description": ""
-    },
-    "webdav": {
-        "message": "WebDAV",
         "description": ""
     },
     "webdavUrl": {
@@ -255,7 +231,7 @@
         "message": "Sync when browser starts or bookmarks change (create/modify/delete)",
         "description": ""
     },
-"interval720": {
+    "interval720": {
         "message": "12 hours",
         "description": ""
     },
@@ -530,5 +506,9 @@
     "webdavPathPlaceholder": {
         "message": "/bookmarks.json",
         "description": "Placeholder for WebDAV path input"
+    },
+    "partialFailure": {
+        "message": "Completed with failures",
+        "description": "Download/restore finished but some bookmarks failed to be recreated"
     }
 }

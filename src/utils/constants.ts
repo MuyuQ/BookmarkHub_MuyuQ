@@ -26,11 +26,59 @@ export const WEBDAV_DEFAULTS = {
 } as const;
 
 // 根书签文件夹名称映射
+// 覆盖主流浏览器语言的本地化根文件夹标题；未命中的语言会把内容归入"其他书签"
+// （可在发现新变体时按类别追加，注意各类别之间不能有重复字符串）
 export const ROOT_FOLDER_NAMES: Record<string, string[]> = {
-  TOOLBAR: ['书签栏', 'Bookmarks Bar', '书签工具栏'],
-  MENU: ['菜单文件夹', 'Menu', '书签菜单'],
-  UNFILED: ['其他书签', 'Other Bookmarks', '未分类'],
-  MOBILE: ['移动设备书签', 'Mobile Bookmarks'],
+  TOOLBAR: [
+    '书签栏', '书签工具栏', 'Bookmarks Bar', 'Bookmarks bar',
+    'Leseleiste', 'Favoritenleiste',          // de
+    'Barre de favoris',                        // fr
+    'Barra de favoritos',                      // es / pt-BR
+    'Barra de marcadores',                     // pt-PT
+    'Barra dei segnalibri',                    // it
+    'ブックマークバー',                         // ja
+    '북마크바', '북마크 도구모음',                // ko
+    'Панель закладок',                         // ru
+    'شريط المفضلة',                            // ar
+    'Bladwijzerbalk',                          // nl
+  ],
+  MENU: [
+    '菜单文件夹', '书签菜单', 'Bookmarks Menu',
+    'Lesezeichen-Menü',                        // de
+    'Menu des marque-pages',                   // fr
+    'Menú de marcadores',                      // es
+    'Menu dei segnalibri',                     // it
+    'ブックマークメニュー',                      // ja
+    '북마크 메뉴',                               // ko
+    'Меню закладок',                           // ru
+    'قائمة المفضلة',                           // ar
+  ],
+  UNFILED: [
+    '其他书签', '未分类', 'Other Bookmarks',
+    'Weitere Lesezeichen',                     // de
+    'Autres favoris',                          // fr
+    'Otros marcadores',                        // es
+    'Outros favoritos',                        // pt
+    'Altri segnalibri',                        // it
+    'その他のブックマーク',                      // ja
+    '기타 북마크',                               // ko
+    'Другие закладки',                         // ru
+    'مفضلات أخرى',                             // ar
+    'Andere bladwijzers',                      // nl
+  ],
+  MOBILE: [
+    '移动设备书签', 'Mobile Bookmarks',
+    'Mobil-Lesezeichen', 'Mobile Favoriten',   // de
+    'Favoris de mobile', 'Marque-pages mobiles', // fr
+    'Marcadores móviles',                      // es
+    'Favoritos móveis',                        // pt
+    'Segnalibri mobili',                       // it
+    'モバイルのブックマーク',                     // ja
+    '모바일 북마크',                             // ko
+    'Мобильные закладки',                      // ru
+    'مفضلات الهاتف المحمول',                   // ar
+    'Mobiele bladwijzers',                     // nl
+  ],
 };
 
 // 浏览器根节点 ID

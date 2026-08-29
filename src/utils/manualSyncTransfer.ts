@@ -1,84 +1,92 @@
+/**
+ * 手动同步传输模块
+ *
+ * 手动上传/下载与自动同步使用完全相同的数据格式与上传路径（P0-3/P0-4）：
+ * - 上传：读远程 → 合并双方墓碑 → 过滤已删除书签 → 通过 uploadSnapshot
+ *   追加备份记录写回（保留远程备份历史）→ 同步更新本地基线缓存
+ * - 下载：读取远程最新快照
+ */
+
 import type { Setting } from './setting';
 import type { BookmarkInfo, SyncData } from './models';
-import BookmarkService from './services';
-import { formatBookmarks, getBookmarkCount } from './bookmarkUtils';
-import { webdavRead, webdavWrite } from './webdav';
+import { uploadSnapshot } from './sync';
+import { fetchRemoteData, isSyncData } from './sync/dataFetcher';
+import { normalizeBookmarkIds, normalizeTreeShape, filterTombstonedNodes, getBookmarkCount } from './bookmarkUtils';
+import { mergeTombstones } from './merge';
+import { getLocalCache, saveLocalCache } from './localCache';
 import { getBrowserInfo } from './browserInfo';
+import BookmarkService from './services';
+import { webdavRead } from './webdav';
 import { createError } from './errors';
-
-function createManualSyncData(bookmarks: BookmarkInfo[]): SyncData {
-  return {
-    version: '2.0',
-    lastSyncTimestamp: Date.now(),
-    sourceBrowser: getBrowserInfo(),
-    backupRecords: [
-      {
-        backupTimestamp: Date.now(),
-        bookmarkCount: getBookmarkCount(bookmarks),
-        bookmarkData: formatBookmarks(bookmarks) || [],
-      },
-    ],
-    tombstones: [],
-  };
-}
+import { logger } from './logger';
 
 export async function uploadManualBookmarks(setting: Setting, bookmarks: BookmarkInfo[]): Promise<SyncData> {
-  const syncData = createManualSyncData(bookmarks);
-  const content = JSON.stringify(syncData);
+    // 1. 获取现有远程数据（用于保留备份历史与墓碑）
+    const existingData = await fetchRemoteData(setting);
+    const remoteTombstones = (existingData && isSyncData(existingData)) ? existingData.tombstones || [] : [];
 
-  if (setting.storageType === 'webdav') {
-    const writeSucceeded = await webdavWrite(content);
-    if (!writeSucceeded) {
-      throw createError.networkError('WebDAV upload failed');
-    }
+    // 2. 获取本地缓存墓碑（用户在此设备上的删除记录）
+    const localCache = await getLocalCache();
+    const localTombstones = localCache?.tombstones || [];
+
+    // 3. 合并双方墓碑，并从上传内容中剔除已删除的书签（防止复活）
+    const tombstones = mergeTombstones(localTombstones, remoteTombstones);
+    const tombstoneIds = new Set(tombstones.map(t => t.id));
+
+    // 4. 统一为剥根格式并标准化 ID（与自动同步一致，P0-4）
+    const stripped = normalizeTreeShape(bookmarks);
+    normalizeBookmarkIds(stripped);
+    const filtered = tombstoneIds.size > 0 ? filterTombstonedNodes(stripped, tombstoneIds) : stripped;
+
+    // 5. 通过统一上传路径写回（保留远程备份历史与墓碑）
+    const syncData = await uploadSnapshot(filtered, tombstones);
+
+    // 6. 上传内容即本机最新状态，同步更新本地基线缓存，
+    //    避免下次自动同步把本次上传内容重新当作本地变更
+    const newCache: SyncData = {
+        ...syncData,
+        lastSyncTimestamp: Date.now(),
+        sourceBrowser: getBrowserInfo(),
+    };
+    await saveLocalCache(newCache);
+
+    logger.info('uploadManualBookmarks: 手动上传完成', {
+        count: getBookmarkCount(filtered),
+        tombstones: tombstones.length,
+    });
     return syncData;
-  }
-
-  if (!setting.githubToken) {
-    throw createError.authTokenMissing();
-  }
-  if (!setting.gistID) {
-    throw createError.gistIdMissing();
-  }
-  if (!setting.gistFileName) {
-    throw createError.fileNameMissing();
-  }
-
-  await BookmarkService.update({
-    files: {
-      [setting.gistFileName]: {
-        content,
-      },
-    },
-    description: setting.gistFileName,
-  });
-
-  return syncData;
 }
 
 export async function downloadManualBookmarks(setting: Setting): Promise<BookmarkInfo[]> {
-  const content = setting.storageType === 'webdav'
-    ? await webdavRead()
-    : await BookmarkService.get();
+    const content = setting.storageType === 'webdav'
+        ? await webdavRead()
+        : await BookmarkService.get();
 
-  if (!content) {
-    const remoteName = setting.storageType === 'webdav' ? setting.webdavPath : setting.gistFileName;
-    throw createError.fileNotFound(remoteName, setting.storageType);
-  }
-
-  const data = JSON.parse(content);
-
-  if (data.version === '2.0') {
-    const bookmarks = data.backupRecords?.[0]?.bookmarkData;
-    if (!bookmarks || bookmarks.length === 0) {
-      throw createError.emptyGistFile(setting.gistFileName);
+    if (!content) {
+        const remoteName = setting.storageType === 'webdav' ? setting.webdavPath : setting.gistFileName;
+        throw createError.fileNotFound(remoteName, setting.storageType);
     }
-    return bookmarks;
-  }
 
-  if (Array.isArray(data.bookmarks) && data.bookmarks.length > 0) {
-    return data.bookmarks;
-  }
+    let data: unknown;
+    try {
+        data = JSON.parse(content);
+    } catch {
+        // 远程文件损坏时给出明确错误，而不是裸 SyntaxError
+        throw createError.parseError('Remote sync data is not valid JSON');
+    }
 
-  throw createError.invalidDataFormat();
+    if (data && typeof data === 'object' && (data as { version?: string }).version === '2.0') {
+        const bookmarks = (data as SyncData).backupRecords?.[0]?.bookmarkData;
+        if (!bookmarks || bookmarks.length === 0) {
+            throw createError.emptyGistFile(setting.gistFileName);
+        }
+        return normalizeTreeShape(bookmarks);
+    }
+
+    const legacyBookmarks = (data as { bookmarks?: BookmarkInfo[] }).bookmarks;
+    if (Array.isArray(legacyBookmarks) && legacyBookmarks.length > 0) {
+        return normalizeTreeShape(legacyBookmarks);
+    }
+
+    throw createError.invalidDataFormat();
 }

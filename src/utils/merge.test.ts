@@ -36,7 +36,8 @@ describe('threeWayMerge', () => {
       expect(result.merged).toEqual(local)
       expect(result.hasChanges).toBe(true)
       expect(result.conflicts).toHaveLength(0)
-      expect(result.changeSummary).toBe('首次同步，使用本地数据')
+      // P0-2 后首次同步统一走"空基线联合合并"，不再有单独的"使用本地数据"分支
+      expect(result.changeSummary).toBe('本地新增 2 个')
     })
 
     it('当 baseline 为空数组时，应使用本地数据', () => {

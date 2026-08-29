@@ -8,13 +8,13 @@
 import { BookmarkInfo, SyncData, BackupRecord, BrowserInfo, Tombstone } from './models';
 import { BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS } from './constants';
 import { getBrowserInfo } from './browserInfo';
-import { getBookmarkCount } from './bookmarkUtils';
+import { getBookmarkCount, normalizeTreeShape } from './bookmarkUtils';
 import { logger } from './logger';
 
 /**
  * 获取本地缓存
  * 从 browser.storage.local 获取缓存的同步数据
- * 
+ *
  * @returns Promise<SyncData | null> 缓存数据，不存在返回 null
  */
 export async function getLocalCache(): Promise<SyncData | null> {
@@ -27,6 +27,12 @@ export async function getLocalCache(): Promise<SyncData | null> {
             if (!cache.tombstones) {
                 cache.tombstones = [];
             }
+            // 向后兼容：旧版本缓存的书签数据可能含虚拟根/合成根节点包裹（P0-4），
+            // 读取时统一归一化为剥根格式
+            cache.backupRecords = cache.backupRecords.map((record: BackupRecord) => ({
+                ...record,
+                bookmarkData: normalizeTreeShape(record.bookmarkData || []),
+            }));
             return cache;
         }
 
@@ -88,8 +94,10 @@ export async function initLocalCache(): Promise<SyncData> {
 
 /**
  * 验证备份数据完整性
- * 确保备份记录按时间戳降序排列（最新的在前）
- * 
+ * 确保备份记录按时间戳降序排列（最新的在前，允许同时间戳）。
+ * 不做严格降序要求：设备间时钟偏差会产生"旧记录时间戳更新"的合法数据，
+ * 严格校验会导致整个缓存被判无效而丢失基线（P1-2）。
+ *
  * @param records - 备份记录数组
  * @returns boolean 是否有效
  */
@@ -97,9 +105,9 @@ export function validateBackupRecords(records: BackupRecord[]): boolean {
     if (!records || records.length === 0) {
         return true;
     }
-    
+
     for (let i = 1; i < records.length; i++) {
-        if (records[i].backupTimestamp >= records[i - 1].backupTimestamp) {
+        if (records[i].backupTimestamp > records[i - 1].backupTimestamp) {
             return false;
         }
     }
@@ -108,13 +116,13 @@ export function validateBackupRecords(records: BackupRecord[]): boolean {
 
 /**
  * 排序备份记录（按时间戳降序）
- * 用于修复可能的数据顺序问题
- * 
+ * 返回新数组，不修改入参
+ *
  * @param records - 备份记录数组
- * @returns BackupRecord[] 排序后的数组
+ * @returns BackupRecord[] 排序后的新数组
  */
 export function sortBackupRecords(records: BackupRecord[]): BackupRecord[] {
-    return records.sort((a, b) => b.backupTimestamp - a.backupTimestamp);
+    return [...records].sort((a, b) => b.backupTimestamp - a.backupTimestamp);
 }
 
 /**

@@ -10,6 +10,7 @@
  */
 
 import { BookmarkInfo } from './models';
+import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES } from './constants';
 
 /**
  * 简单字符串哈希函数
@@ -23,6 +24,42 @@ function hashString(str: string): number {
         hash = hash & hash;
     }
     return Math.abs(hash);
+}
+
+/**
+ * 旧版自动同步产生的"合成根节点"的稳定 ID
+ * （对虚拟根节点执行 normalizeBookmarkIds 时，title 为空串 → folder_hash('') = folder_0）
+ */
+export const SYNTHETIC_ROOT_ID = 'folder_0';
+
+/** 顶层根文件夹的类型化稳定 ID 前缀（跨语言一致，不依赖本地化标题） */
+const ROOT_TYPE_IDS = {
+    TOOLBAR: 'root_toolbar',
+    MENU: 'root_menu',
+    UNFILED: 'root_unfiled',
+    MOBILE: 'root_mobile',
+} as const;
+
+/**
+ * 根据标题识别根文件夹类型，返回类型化稳定 ID
+ * 顶层根文件夹的标题随浏览器语言变化（书签栏/Bookmarks Bar/Leseleiste...），
+ * 使用类型化 ID 保证跨设备、跨语言的合并一致性
+ */
+function resolveRootTypeId(title: string): string | null {
+    if (ROOT_FOLDER_NAMES.TOOLBAR.includes(title)) return ROOT_TYPE_IDS.TOOLBAR;
+    if (ROOT_FOLDER_NAMES.MENU.includes(title)) return ROOT_TYPE_IDS.MENU;
+    if (ROOT_FOLDER_NAMES.UNFILED.includes(title)) return ROOT_TYPE_IDS.UNFILED;
+    if (ROOT_FOLDER_NAMES.MOBILE.includes(title)) return ROOT_TYPE_IDS.MOBILE;
+    return null;
+}
+
+/** 判断节点是否为浏览器的结构性根文件夹（不可删除/移动） */
+export function isStructuralRootId(browserId: string | undefined): boolean {
+    if (!browserId) return false;
+    return ROOT_NODE_IDS.TOOLBAR.includes(browserId) ||
+           ROOT_NODE_IDS.UNFILED.includes(browserId) ||
+           ROOT_NODE_IDS.MOBILE.includes(browserId) ||
+           ROOT_NODE_IDS.MENU.includes(browserId);
 }
 
 /**
@@ -40,12 +77,64 @@ export function generateStableId(bookmark: BookmarkInfo, parentPath: string = ''
         // 书签：用 URL 生成稳定 ID
         const hash = hashString(bookmark.url);
         return `bm_${hash}`;
-    } else {
-        // 文件夹：用标题 + 父路径生成稳定 ID
-        const path = parentPath ? `${parentPath}/${bookmark.title}` : bookmark.title;
-        const hash = hashString(path);
-        return `folder_${hash}`;
     }
+
+    if (parentPath === '') {
+        // 顶层节点：优先使用类型化 ID，保证跨语言/跨设备一致
+        const rootTypeId = resolveRootTypeId(bookmark.title);
+        if (rootTypeId) return rootTypeId;
+        // 空标题顶层文件夹 = 旧版数据的合成根节点
+        if (!bookmark.title) return SYNTHETIC_ROOT_ID;
+    }
+
+    // 文件夹：用标题 + 父路径生成稳定 ID
+    const path = parentPath ? `${parentPath}/${bookmark.title}` : bookmark.title;
+    const hash = hashString(path);
+    return `folder_${hash}`;
+}
+
+/**
+ * 归一化书签树的顶层形状
+ *
+ * 历史数据存在三种顶层形态：
+ * 1. 浏览器 getTree() 的完整树（单个虚拟根节点，id 为 '0'/'root________'）
+ * 2. 旧版自动同步上传的数据（单个合成根节点 folder_0，title 为空串）
+ * 3. 标准的剥根格式（顶层为书签栏/其他书签等实际根文件夹）
+ *
+ * 本函数将形态 1/2 统一展开为形态 3。
+ */
+export function normalizeTreeShape(tree: BookmarkInfo[]): BookmarkInfo[] {
+    if (
+        tree.length === 1 &&
+        !tree[0].url &&
+        Array.isArray(tree[0].children) &&
+        (ROOT_NODE_IDS.ROOT.includes(tree[0].id || '') || tree[0].id === SYNTHETIC_ROOT_ID)
+    ) {
+        return tree[0].children;
+    }
+    return tree;
+}
+
+/**
+ * 从树中剔除已被墓碑标记的节点（含整个子树）
+ * 用于手动上传前过滤，防止已被其他设备删除的书签"复活"
+ *
+ * @param tree - 已标准化的书签树
+ * @param tombstoneIds - 墓碑 ID 集合
+ * @returns 过滤后的新书签树
+ */
+export function filterTombstonedNodes(tree: BookmarkInfo[], tombstoneIds: Set<string>): BookmarkInfo[] {
+    const result: BookmarkInfo[] = [];
+    for (const node of tree) {
+        if (node.id && tombstoneIds.has(node.id)) {
+            continue;
+        }
+        if (node.children) {
+            node.children = filterTombstonedNodes(node.children, tombstoneIds);
+        }
+        result.push(node);
+    }
+    return result;
 }
 
 /**

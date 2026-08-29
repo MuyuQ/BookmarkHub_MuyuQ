@@ -223,7 +223,7 @@
         "message": "浏览器启动时或书签变动时（新增/修改/删除）自动同步",
         "description": ""
     },
-"interval720": {
+    "interval720": {
         "message": "12小时",
         "description": ""
     },
@@ -378,5 +378,9 @@
     "webdavPathPlaceholder": {
         "message": "/bookmarks.json",
         "description": "WebDAV 路径输入框占位符"
+    },
+    "partialFailure": {
+        "message": "部分书签恢复失败",
+        "description": "下载/恢复完成但部分书签重建失败"
     }
 }

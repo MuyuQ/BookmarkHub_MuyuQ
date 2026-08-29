@@ -1,10 +1,10 @@
 import { Setting } from '../utils/setting'
-import { startAutoSync, stopAutoSync, performSync, getIsSyncing, getIsSuppressingEvents, registerBookmarkEventCallback } from '../utils/sync'
+import { startAutoSync, stopAutoSync, performSync, getIsSyncing, getIsSuppressingEvents, registerBookmarkEventCallback, beginBulkBookmarkOperation, endBulkBookmarkOperation } from '../utils/sync'
 import optionsStorage from '../utils/optionsStorage'
 import iconLogo from '../assets/icon.png'
-import { OperType, BookmarkInfo, RootBookmarksType, BrowserType } from '../utils/models'
+import { BookmarkInfo, RootBookmarksType, BrowserType } from '../utils/models'
 import { Bookmarks } from 'wxt/browser'
-import { getBookmarkCount } from '../utils/bookmarkUtils'
+import { getBookmarkCount, generateStableId, normalizeTreeShape } from '../utils/bookmarkUtils'
 import { handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
 import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS, MV3_CONFIG } from '../utils/constants'
@@ -12,6 +12,7 @@ import { getBackupRecords, restoreFromBackup, deleteBackupRecord, getLocalCache,
 import { getBrowserInfo } from '../utils/browserInfo'
 import { Tombstone } from '../utils/models'
 import { downloadManualBookmarks, uploadManualBookmarks } from '../utils/manualSyncTransfer'
+import { syncDebouncer } from '../utils/debounce'
 
 export default defineBackground(() => {
 
@@ -30,15 +31,19 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(async () => {
     const setting = await Setting.build();
     if (setting.enableAutoSync) {
-      startAutoSync();
+      await startAutoSync();
     }
+    // P1-5: 恢复 Service Worker 休眠前遗留的待同步请求
+    await syncDebouncer.checkAndResumePendingSync();
   });
 
   browser.runtime.onStartup.addListener(async () => {
     const setting = await Setting.build();
     if (setting.enableAutoSync) {
-      startAutoSync();
+      await startAutoSync();
     }
+    // P1-5: 恢复浏览器关闭前遗留的待同步请求
+    await syncDebouncer.checkAndResumePendingSync();
   });
 
   // MV3 Alarm 监听器 - 定时同步触发
@@ -84,12 +89,6 @@ export default defineBackground(() => {
    */
   let operationQueue: Promise<void> = Promise.resolve();
   
-  /**
-   * 当前操作类型
-   * 用于书签事件监听器判断是否需要响应
-   */
-  let curOperType = OperType.NONE;
-
   /**
    * 动态检测当前浏览器类型
    * 通过检查书签树根节点 ID 来判断是 Firefox 还是 Chrome
@@ -141,14 +140,12 @@ export default defineBackground(() => {
     
     if (msg.name === 'upload') {
       queueOperation(async () => {
-        curOperType = OperType.SYNC;
         try {
           await uploadBookmarks();
           safeSendResponse(sendResponse, { success: true });
         } catch (error) {
           safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
         } finally {
-          curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
           await refreshLocalCount();
         }
@@ -165,14 +162,12 @@ export default defineBackground(() => {
           });
           return;
         }
-        curOperType = OperType.SYNC;
         try {
           await downloadBookmarks();
           safeSendResponse(sendResponse, { success: true });
         } catch (error) {
           safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
         } finally {
-          curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
           await refreshLocalCount();
         }
@@ -181,7 +176,6 @@ export default defineBackground(() => {
     }
     if (msg.name === 'removeAll') {
       queueOperation(async () => {
-        curOperType = OperType.REMOVE;
         try {
           await clearBookmarkTree();
           const setting = await Setting.build();
@@ -206,7 +200,6 @@ export default defineBackground(() => {
           }
           safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
         } finally {
-          curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
           await refreshLocalCount();
         }
@@ -238,21 +231,31 @@ export default defineBackground(() => {
     }
     if (msg.name === 'restoreFromBackup') {
       queueOperation(async () => {
-        curOperType = OperType.SYNC;
         try {
           const bookmarks = await restoreFromBackup(msg.timestamp);
           if (!bookmarks) {
             safeSendResponse(sendResponse, { error: 'Backup not found' });
             return;
           }
-          await clearBookmarkTree();
-          await createBookmarkTree(bookmarks);
+          // 批量重建期间忽略书签事件（避免虚假墓碑）
+          beginBulkBookmarkOperation();
+          let createStats: { created: number; failed: number };
+          try {
+            await clearBookmarkTree();
+            normalizeFolderNames(bookmarks);
+            createStats = await createBookmarkTree(bookmarks);
+          } finally {
+            endBulkBookmarkOperation();
+          }
           await refreshLocalCount();
-          safeSendResponse(sendResponse, { success: true, count: getBookmarkCount(bookmarks) });
+          if (createStats.failed > 0) {
+            safeSendResponse(sendResponse, { success: false, error: `partialFailure (${createStats.failed})`, restored: createStats.created });
+          } else {
+            safeSendResponse(sendResponse, { success: true, count: getBookmarkCount(bookmarks) });
+          }
         } catch (error) {
           safeSendResponse(sendResponse, { error: handleError(error).message, success: false });
         } finally {
-          curOperType = OperType.NONE;
           browser.action.setBadgeText({ text: "" });
         }
       });
@@ -268,6 +271,43 @@ export default defineBackground(() => {
   });
 
   /**
+   * 在书签树中查找指定浏览器 ID 节点的路径（用于文件夹稳定 ID 计算）
+   * 路径格式与 generateStableId 的 parentPath 约定一致（'父路径/标题'）
+   */
+  function findNodePath(nodes: BookmarkInfo[], targetId: string, parentPath: string = ''): string | null {
+    for (const node of nodes) {
+      const path = parentPath ? `${parentPath}/${node.title}` : node.title;
+      if (node.id === targetId) {
+        return path;
+      }
+      if (node.children) {
+        const found = findNodePath(node.children, targetId, path);
+        if (found !== null) return found;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 计算被删除节点的稳定 ID
+   * 墓碑必须使用与合并层一致的稳定 ID（bm_<url哈希> / folder_<路径哈希>），
+   * 否则事件创建的墓碑永远无法匹配合并时的稳定 ID，删除会被"复活"
+   */
+  async function computeStableIdForRemovedNode(
+    node: { title: string; url?: string },
+    parentNodeId: string
+  ): Promise<string> {
+    if (node.url) {
+      return generateStableId({ title: node.title, url: node.url } as BookmarkInfo);
+    }
+    // 文件夹：需要父路径参与哈希。节点已被删除，只能通过父节点反查路径
+    const tree = await getBookmarks();
+    const stripped = normalizeTreeShape(tree);
+    const parentPath = findNodePath(stripped, parentNodeId) || '';
+    return generateStableId({ title: node.title } as BookmarkInfo, parentPath);
+  }
+
+  /**
    * 为被删除的书签创建墓碑记录
    * 墓碑用于防止已删除的书签在其他设备同步时被"复活"
    *
@@ -279,6 +319,12 @@ export default defineBackground(() => {
     removeInfo: Bookmarks.OnRemovedRemoveInfoType
   ): Promise<void> {
     try {
+      // 换算为稳定 ID（与合并层的 ID 方案一致）
+      const stableId = await computeStableIdForRemovedNode(
+        { title: removeInfo.node?.title || '', url: removeInfo.node?.url },
+        removeInfo.parentId || ''
+      );
+
       let cache = await getLocalCache();
       if (!cache) {
         cache = createEmptyLocalCache();
@@ -289,20 +335,20 @@ export default defineBackground(() => {
       const browserInfo = getBrowserInfo();
       const deviceIdentifier = `${browserInfo.browser}/${browserInfo.os}`;
       const tombstone: Tombstone = {
-        id: bookmarkId,
+        id: stableId,
         deletedAt: Date.now(),
         deletedBy: deviceIdentifier
       };
-      const existingIndex = cache.tombstones.findIndex(t => t.id === bookmarkId);
+      const existingIndex = cache.tombstones.findIndex(t => t.id === stableId);
       if (existingIndex >= 0) {
         cache.tombstones[existingIndex] = tombstone;
-        logger.debug('createTombstoneForBookmark: Updated existing tombstone', { bookmarkId });
+        logger.debug('createTombstoneForBookmark: Updated existing tombstone', { stableId });
       } else {
         cache.tombstones.push(tombstone);
-        logger.debug('createTombstoneForBookmark: Created tombstone', { bookmarkId, deviceIdentifier });
+        logger.debug('createTombstoneForBookmark: Created tombstone', { stableId, deviceIdentifier });
       }
       await saveLocalCache(cache);
-      logger.info('createTombstoneForBookmark: Tombstone saved', { bookmarkId, deviceIdentifier });
+      logger.info('createTombstoneForBookmark: Tombstone saved', { stableId, deviceIdentifier });
     } catch (error) {
       logger.error('createTombstoneForBookmark: Failed to save tombstone', { bookmarkId, error });
     }
@@ -393,18 +439,36 @@ export default defineBackground(() => {
     try {
       const setting = await Setting.build();
       const bookmarks = await downloadManualBookmarks(setting);
-      
-      await clearBookmarkTree();
-      normalizeFolderNames(bookmarks);
-      await createBookmarkTree(bookmarks);
-      
+
+      // 批量重建期间的书签事件是扩展自身操作，不代表用户行为，
+      // 必须忽略以避免为每个被清空的书签生成虚假墓碑
+      beginBulkBookmarkOperation();
+      let createStats: { created: number; failed: number };
+      try {
+        await clearBookmarkTree();
+        normalizeFolderNames(bookmarks);
+        createStats = await createBookmarkTree(bookmarks);
+      } finally {
+        endBulkBookmarkOperation();
+      }
+
       const count = getBookmarkCount(bookmarks);
       await browser.storage.local.set({ [STORAGE_KEYS.REMOTE_COUNT]: count, [STORAGE_KEYS.LOCAL_COUNT]: count });
-      
+
       notifyRefreshCounts();
-      
+
       if (setting.enableNotify) {
-        await showSuccessNotification('downloadBookmarks');
+        if (createStats.failed > 0) {
+          // P1-6: 部分创建失败必须明确告知（本地树已被清空，用户需要知道结果不完整）
+          await browser.notifications.create({
+            type: "basic",
+            iconUrl: iconLogo,
+            title: browser.i18n.getMessage('downloadBookmarks'),
+            message: `${browser.i18n.getMessage('partialFailure')} (${createStats.failed})`
+          });
+        } else {
+          await showSuccessNotification('downloadBookmarks');
+        }
       }
     }
     catch (error: unknown) {
@@ -483,17 +547,26 @@ async function clearBookmarkTree() {
     logger.info(`clearBookmarkTree completed: ${deletedCount} deleted, ${failedCount} failed`);
   }
 
-async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, parentId: string = ROOT_NODE_IDS.ROOT[0]) {
+async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, parentId: string = ROOT_NODE_IDS.ROOT[0]): Promise<{ created: number; failed: number }> {
     if (bookmarkList == null) {
-      return;
+      return { created: 0, failed: 0 };
     }
 
     const browserType = await detectBrowserType();
     logger.debug('createBookmarkTree: Browser type', browserType);
 
+    let createdCount = 0;
+    let failedCount = 0;
+
     for (let i = 0; i < bookmarkList.length; i++) {
       let node = bookmarkList[i];
       logger.debug('Processing bookmark', { title: node.title, parentId: node.parentId });
+
+      // P1-7: 跳过旧数据中的合成根节点（空标题文件夹，如 folder_0 包裹）与分隔线，
+      // 否则会在"其他书签"下创建一个空垃圾文件夹
+      if (!node.title && !node.url) {
+        continue;
+      }
 
       // 处理根文件夹类型
       if (node.title == RootBookmarksType.MenuFolder
@@ -507,13 +580,14 @@ async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, pare
               targetParentId = ROOT_NODE_IDS.MENU[0];
               break;
             case RootBookmarksType.MobileFolder:
-              targetParentId = ROOT_NODE_IDS.MOBILE[0];
+              targetParentId = ROOT_NODE_IDS.MOBILE[1];
               break;
             case RootBookmarksType.ToolbarFolder:
-              targetParentId = ROOT_NODE_IDS.TOOLBAR[0];
+              // Firefox 的书签工具栏根节点 ID 是 'toolbar_____'，不是 Chrome 的 '1'
+              targetParentId = ROOT_NODE_IDS.TOOLBAR[1];
               break;
             case RootBookmarksType.UnfiledFolder:
-              targetParentId = ROOT_NODE_IDS.UNFILED[0];
+              targetParentId = ROOT_NODE_IDS.UNFILED[1];
               break;
           }
         } else {
@@ -531,7 +605,9 @@ async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, pare
           }
         }
         node.children?.forEach(c => c.parentId = targetParentId);
-        await createBookmarkTree(node.children, targetParentId);
+        const rootStats = await createBookmarkTree(node.children, targetParentId);
+        createdCount += rootStats.created;
+        failedCount += rootStats.failed;
         continue;
       }
 
@@ -549,17 +625,23 @@ async function createBookmarkTree(bookmarkList: BookmarkInfo[] | undefined, pare
           title: node.title,
           url: node.url
         });
+        createdCount++;
         logger.debug('Created bookmark', { title: node.title, id: res.id });
       } catch (err) {
+        failedCount++;
         logger.error('Failed to create bookmark', { title: node.title, error: err });
       }
 
       // 递归处理子节点
       if (res.id && node.children && node.children.length > 0) {
         node.children.forEach(c => c.parentId = res.id);
-        await createBookmarkTree(node.children, res.id);
+        const childStats = await createBookmarkTree(node.children, res.id);
+        createdCount += childStats.created;
+        failedCount += childStats.failed;
       }
     }
+
+    return { created: createdCount, failed: failedCount };
   }
 
 async function refreshLocalCount() {

@@ -33,11 +33,12 @@ function createBookmarkMap(bookmarks: BookmarkInfo[]): Map<string, BookmarkInfo>
 }
 
 function hasChanged(a: BookmarkInfo, b: BookmarkInfo): boolean {
+  // 注意：不比较 dateGroupModified —— 不同设备对同一节点的创建/写入时间戳
+  // 必然不同，纳入比较会导致同步在设备间无限往返产生虚假"modified"变更
   return a.title !== b.title ||
          a.url !== b.url ||
          a.parentId !== b.parentId ||
          a.index !== b.index ||
-         a.dateGroupModified !== b.dateGroupModified ||
          a.type !== b.type;
 }
 

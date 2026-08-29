@@ -11,6 +11,7 @@ import { webdavRead } from '../webdav';
 import { logger } from '../logger';
 import { Setting } from '../setting';
 import { createError } from '../errors';
+import { normalizeTreeShape } from '../bookmarkUtils';
 
 /** 远程数据最大允许大小 (10 MB) */
 const MAX_REMOTE_DATA_SIZE = 10 * 1024 * 1024;
@@ -45,18 +46,20 @@ export function isSyncData(obj: unknown): obj is SyncData {
 export function extractBookmarksFromData(data: SyncData | SyncDataInfo | null): BookmarkInfo[] | undefined {
     if (!data) return undefined;
 
+    let bookmarks: BookmarkInfo[] | undefined;
+
     if (isSyncData(data)) {
         // It's v2.0 format - get bookmarks from the most recent backup record
         if (data.backupRecords && data.backupRecords.length > 0) {
-            return data.backupRecords[0].bookmarkData;
+            bookmarks = data.backupRecords[0].bookmarkData;
         }
-        return undefined;
     } else if (isSyncDataInfo(data)) {
         // It's v1.0 format - get bookmarks directly
-        return data.bookmarks;
+        bookmarks = data.bookmarks;
     }
 
-    return undefined;
+    // 兼容历史数据中的虚拟根/合成根节点包裹，统一为剥根格式（P0-4）
+    return bookmarks ? normalizeTreeShape(bookmarks) : undefined;
 }
 
 /**

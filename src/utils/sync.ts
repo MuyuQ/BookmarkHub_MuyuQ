@@ -11,18 +11,24 @@
 
 import { Setting } from './setting';
 // SyncDataInfo 用于向后兼容旧数据格式的迁移逻辑
-import { SyncResult, ConflictInfo, SyncData, BackupRecord, Tombstone, SyncDataInfo } from './models';
+import { SyncResult, SyncData, BackupRecord, Tombstone, SyncDataInfo } from './models';
 import BookmarkService from './services';
-import { getBookmarks } from './services';
-import { formatBookmarks, getBookmarkCount, normalizeBookmarkIds } from './bookmarkUtils';
+import {
+    getBookmarkCount,
+    normalizeBookmarkIds,
+    normalizeTreeShape,
+    generateStableId,
+    isStructuralRootId,
+} from './bookmarkUtils';
 import { webdavWrite } from './webdav';
 import { handleError, createError } from './errors';
 import { logger, logSync } from './logger';
-import { threeWayMerge, ThreeWayMergeResult, ConflictMode as MergeConflictMode } from './merge';
-import { STORAGE_KEYS, BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS, MV3_CONFIG } from './constants';
+import { threeWayMerge, mergeTombstones, ConflictMode as MergeConflictMode } from './merge';
+import { STORAGE_KEYS, BACKUP_STORAGE_KEYS, BACKUP_DEFAULTS, MV3_CONFIG, ROOT_NODE_IDS, ROOT_FOLDER_NAMES } from './constants';
 import { Bookmarks } from 'wxt/browser';
-import { getLocalCache, saveLocalCache } from './localCache';
+import { getLocalCache, saveLocalCache, sortBackupRecords } from './localCache';
 import { syncDebouncer } from './debounce';
+import { getBrowserInfo, detectBookmarkBrowserType, resolveRootTargetBrowserId } from './browserInfo';
 import { fetchRemoteData as _fetchRemoteData, extractBookmarksFromData as _extractBookmarksFromData, isSyncDataInfo as _isSyncDataInfo, isSyncData as _isSyncData } from './sync/dataFetcher';
 
 // Re-export for backward compatibility
@@ -77,6 +83,64 @@ export function getIsSuppressingEvents(): boolean {
  * 书签事件回调类型
  */
 export type BookmarkEventType = 'onCreated' | 'onChanged' | 'onMoved' | 'onRemoved';
+
+/**
+ * 批量书签操作标志
+ * 扩展自身对书签树的批量修改（合并写回、下载重建、备份恢复）产生的事件
+ * 不代表用户操作，必须完全忽略——否则会产生虚假墓碑并引发递归同步
+ */
+let isBulkBookmarkOperation = false;
+
+/** 进入批量书签操作（下载/恢复等，期间书签事件被完全忽略） */
+export function beginBulkBookmarkOperation(): void {
+    isBulkBookmarkOperation = true;
+}
+
+/** 退出批量书签操作 */
+export function endBulkBookmarkOperation(): void {
+    isBulkBookmarkOperation = false;
+}
+
+/**
+ * 同步期间排队的事件（P1-1）
+ * 同步过程中用户的书签操作不再被静默丢弃，而是排队等待同步结束后重放，
+ * 保证墓碑创建（如删除事件）不丢失
+ */
+interface QueuedBookmarkEvent {
+    type: BookmarkEventType;
+    id: string;
+    info: unknown;
+}
+const pendingBookmarkEvents: QueuedBookmarkEvent[] = [];
+const MAX_PENDING_EVENTS = 200;
+let pendingStartupSync = false;
+
+function enqueueBookmarkEvent(type: BookmarkEventType, id: string, info: unknown): void {
+    if (pendingBookmarkEvents.length >= MAX_PENDING_EVENTS) {
+        pendingBookmarkEvents.shift();
+    }
+    pendingBookmarkEvents.push({ type, id, info });
+}
+
+/**
+ * 重放同步期间排队的事件
+ * 在 performSync 的 finally 中、事件抑制解除后调用
+ */
+async function replayPendingBookmarkEvents(): Promise<void> {
+    if (pendingBookmarkEvents.length === 0 && !pendingStartupSync) return;
+
+    const events = pendingBookmarkEvents.splice(0, pendingBookmarkEvents.length);
+    logger.info(`replayPendingBookmarkEvents: 重放 ${events.length} 个同步期间排队的事件`);
+
+    if (pendingStartupSync) {
+        pendingStartupSync = false;
+        syncDebouncer.triggerSync().catch(err => logger.error('replay startup sync failed', err));
+    }
+    for (const event of events) {
+        executeCallbacks(event.type, event.id, event.info);
+        syncDebouncer.triggerSync().catch(err => logger.error('replay triggerSync failed', err));
+    }
+}
 
 /**
  * 书签事件回调函数
@@ -140,57 +204,54 @@ function executeCallbacks(eventType: BookmarkEventType, id: string, info: unknow
 const syncListeners = {
   onStartup: () => {
     logger.debug('>>> syncListeners.onStartup 触发');
-    logger.info(`onStartup: isSuppressingEvents=${isSuppressingEvents}`);
+    if (isBulkBookmarkOperation) return;
     if (!isSuppressingEvents) {
-      logger.info('onStartup: 调用 syncDebouncer.triggerSync()');
       syncDebouncer.triggerSync().catch(err => logger.error('onStartup sync failed', err));
     } else {
-      logger.info('onStartup: 跳过，事件正在被抑制');
+      // 同步期间浏览器启动：标记待同步，同步结束后补触发
+      pendingStartupSync = true;
     }
   },
   onCreated: (id: string, bookmark: Bookmarks.BookmarkTreeNode) => {
     logger.debug('>>> syncListeners.onCreated 触发', { id, title: bookmark.title, url: bookmark.url });
-    logger.info(`onCreated: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
-    if (!isSuppressingEvents) {
-      logger.info('onCreated: 调用 syncDebouncer.triggerSync()');
-      syncDebouncer.triggerSync().catch(err => logger.error('onCreated sync failed', err));
-      executeCallbacks('onCreated', id, bookmark);
-    } else {
-      logger.info('onCreated: 跳过，事件正在被抑制');
+    if (isBulkBookmarkOperation) return;
+    if (isSuppressingEvents) {
+      // P1-1: 同步期间的用户操作排队重放，而不是静默丢弃
+      enqueueBookmarkEvent('onCreated', id, bookmark);
+      return;
     }
+    syncDebouncer.triggerSync().catch(err => logger.error('onCreated sync failed', err));
+    executeCallbacks('onCreated', id, bookmark);
   },
   onChanged: (id: string, changeInfo: Bookmarks.OnChangedChangeInfoType) => {
     logger.debug('>>> syncListeners.onChanged 触发', { id, changeInfo });
-    logger.info(`onChanged: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
-    if (!isSuppressingEvents) {
-      logger.info('onChanged: 调用 syncDebouncer.triggerSync()');
-      syncDebouncer.triggerSync().catch(err => logger.error('onChanged sync failed', err));
-      executeCallbacks('onChanged', id, changeInfo);
-    } else {
-      logger.info('onChanged: 跳过，事件正在被抑制');
+    if (isBulkBookmarkOperation) return;
+    if (isSuppressingEvents) {
+      enqueueBookmarkEvent('onChanged', id, changeInfo);
+      return;
     }
+    syncDebouncer.triggerSync().catch(err => logger.error('onChanged sync failed', err));
+    executeCallbacks('onChanged', id, changeInfo);
   },
   onMoved: (id: string, moveInfo: Bookmarks.OnMovedMoveInfoType) => {
     logger.debug('>>> syncListeners.onMoved 触发', { id, moveInfo });
-    logger.info(`onMoved: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
-    if (!isSuppressingEvents) {
-      logger.info('onMoved: 调用 syncDebouncer.triggerSync()');
-      syncDebouncer.triggerSync().catch(err => logger.error('onMoved sync failed', err));
-      executeCallbacks('onMoved', id, moveInfo);
-    } else {
-      logger.info('onMoved: 跳过，事件正在被抑制');
+    if (isBulkBookmarkOperation) return;
+    if (isSuppressingEvents) {
+      enqueueBookmarkEvent('onMoved', id, moveInfo);
+      return;
     }
+    syncDebouncer.triggerSync().catch(err => logger.error('onMoved sync failed', err));
+    executeCallbacks('onMoved', id, moveInfo);
   },
   onRemoved: (id: string, removeInfo: Bookmarks.OnRemovedRemoveInfoType) => {
     logger.debug('>>> syncListeners.onRemoved 触发', { id, removeInfo });
-    logger.info(`onRemoved: isSuppressingEvents=${isSuppressingEvents}, isSyncing=${isSyncing}`);
-    if (!isSuppressingEvents) {
-      logger.info('onRemoved: 调用 syncDebouncer.triggerSync()');
-      syncDebouncer.triggerSync().catch(err => logger.error('onRemoved sync failed', err));
-      executeCallbacks('onRemoved', id, removeInfo);
-    } else {
-      logger.info('onRemoved: 跳过，事件正在被抑制');
+    if (isBulkBookmarkOperation) return;
+    if (isSuppressingEvents) {
+      enqueueBookmarkEvent('onRemoved', id, removeInfo);
+      return;
     }
+    syncDebouncer.triggerSync().catch(err => logger.error('onRemoved sync failed', err));
+    executeCallbacks('onRemoved', id, removeInfo);
   },
 };
 
@@ -249,6 +310,212 @@ async function clearSyncState(): Promise<void> {
     } catch (error) {
         logger.error('clearSyncState failed', error);
     }
+}
+
+// ============== 合并结果写回本地书签树 (P0-2) ==============
+
+/**
+ * 获取剥根并标准化后的本地书签树
+ * 所有同步路径统一使用该形态（与远程数据格式一致）
+ */
+async function getLocalBookmarkTree(): Promise<BookmarkInfo[]> {
+    const tree = await browser.bookmarks.getTree();
+    const stripped = normalizeTreeShape(tree as unknown as BookmarkInfo[]);
+    return normalizeBookmarkIds(stripped);
+}
+
+/** 本地书签节点的引用信息（稳定 ID ↔ 浏览器 ID 映射） */
+interface BookmarkNodeRef {
+    browserId: string;
+    stableId: string;
+    parentBrowserId?: string;
+    parentStableId?: string;
+    title: string;
+    url?: string;
+    index?: number;
+    depth: number;
+}
+
+/**
+ * 遍历本地书签树，建立 stableId → 浏览器节点引用 的映射
+ * 不修改原节点（浏览器 ID 需要保留用于 API 调用）
+ */
+function collectLocalRefs(
+    nodes: BookmarkInfo[],
+    parentBrowserId: string | undefined,
+    parentStableId: string | undefined,
+    parentPath: string,
+    depth: number,
+    out: Map<string, BookmarkNodeRef>
+): void {
+    for (const node of nodes) {
+        const stableId = generateStableId(node, parentPath);
+        out.set(stableId, {
+            browserId: node.id || '',
+            stableId,
+            parentBrowserId,
+            parentStableId,
+            title: node.title,
+            url: node.url,
+            index: node.index,
+            depth,
+        });
+        if (node.children) {
+            const childPath = parentPath ? `${parentPath}/${node.title}` : node.title;
+            collectLocalRefs(node.children, node.id || parentBrowserId, stableId, childPath, depth + 1, out);
+        }
+    }
+}
+
+/** 写回操作统计 */
+interface WritebackStats {
+    created: number;
+    removed: number;
+    updated: number;
+    moved: number;
+    failed: number;
+}
+
+/**
+ * 将合并结果应用回本地浏览器书签树
+ *
+ * 三向合并完成后，merged 包含双方的所有变更，但本地浏览器书签树
+ * 并不会自动更新——若不写回，merged 中"仅远程存在的书签"在下次同步时
+ * 会被 detectChanges 误判为本地删除并生成墓碑，导致远程书签被误杀。
+ *
+ * 执行顺序：删除（子先于父）→ 创建（父先于子）→ 更新/移动。
+ * 必须在 beginBulkBookmarkOperation 保护区和事件抑制状态下调用。
+ *
+ * @param merged - 合并后的书签树（已标准化稳定 ID，剥根格式）
+ */
+async function applyMergeToLocalTree(merged: BookmarkInfo[]): Promise<WritebackStats> {
+    const stats: WritebackStats = { created: 0, removed: 0, updated: 0, moved: 0, failed: 0 };
+
+    // 建立本地树映射
+    const rawTree = await browser.bookmarks.getTree();
+    const localRefs = new Map<string, BookmarkNodeRef>();
+    const stripped = normalizeTreeShape(rawTree as unknown as BookmarkInfo[]);
+    collectLocalRefs(stripped, rawTree[0]?.id, undefined, '', 0, localRefs);
+
+    // 建立 merged 索引（节点 ID 已标准化）
+    const mergedNodes = new Map<string, BookmarkInfo>();
+    const mergedParentOf = new Map<string, string | undefined>();
+    (function index(nodes: BookmarkInfo[], parentStableId?: string): void {
+        for (const node of nodes) {
+            if (!node.id) continue;
+            mergedNodes.set(node.id, node);
+            mergedParentOf.set(node.id, parentStableId);
+            if (node.children) index(node.children, node.id);
+        }
+    })(merged, undefined);
+
+    // 1. 删除：本地存在但合并结果中不存在（深度降序，子先于父）
+    const localList = [...localRefs.values()].sort((a, b) => b.depth - a.depth);
+    for (const ref of localList) {
+        if (isStructuralRootId(ref.browserId)) continue;
+        if (!mergedNodes.has(ref.stableId)) {
+            try {
+                await browser.bookmarks.removeTree(ref.browserId);
+                stats.removed++;
+            } catch (err) {
+                // 可能已随父级删除，忽略
+                logger.debug('writeback: remove failed (可能已随父级删除)', { id: ref.browserId, err });
+            }
+        }
+    }
+
+    // 2. 创建：合并结果中存在但本地不存在（父先于子）
+    const browserType = await detectBookmarkBrowserType();
+    const createMissing = async (nodes: BookmarkInfo[], parentBrowserId: string): Promise<void> => {
+        for (const node of nodes) {
+            if (!node.id) continue;
+            const existingRef = localRefs.get(node.id);
+            if (existingRef) {
+                if (node.children) {
+                    await createMissing(node.children, existingRef.browserId);
+                }
+                continue;
+            }
+            try {
+                const created = await browser.bookmarks.create({
+                    parentId: parentBrowserId,
+                    title: node.title,
+                    url: node.url,
+                    index: node.index,
+                });
+                stats.created++;
+                localRefs.set(node.id, {
+                    browserId: created.id,
+                    stableId: node.id,
+                    parentBrowserId,
+                    title: node.title,
+                    url: node.url,
+                    depth: 0,
+                });
+                logger.debug('writeback: created', { title: node.title, parentId: parentBrowserId });
+                if (node.children) {
+                    await createMissing(node.children, created.id);
+                }
+            } catch (err) {
+                stats.failed++;
+                logger.warn('writeback: create failed', { id: node.id, title: node.title, err });
+            }
+        }
+    };
+    for (const topNode of merged) {
+        if (!topNode.id) continue;
+        const existingRef = localRefs.get(topNode.id);
+        if (existingRef) {
+            if (topNode.children) {
+                await createMissing(topNode.children, existingRef.browserId);
+            }
+        } else {
+            await createMissing([topNode], resolveRootTargetBrowserId(topNode, browserType));
+        }
+    }
+
+    // 3. 更新与移动
+    for (const [stableId, node] of mergedNodes) {
+        const ref = localRefs.get(stableId);
+        if (!ref || !ref.browserId) continue;
+        if (isStructuralRootId(ref.browserId)) continue;
+
+        // 内容更新
+        const contentChanged = ref.title !== node.title || (ref.url || undefined) !== (node.url || undefined);
+        if (contentChanged) {
+            try {
+                const changes: { title: string; url?: string } = { title: node.title };
+                if (node.url) changes.url = node.url;
+                await browser.bookmarks.update(ref.browserId, changes);
+                stats.updated++;
+            } catch (err) {
+                stats.failed++;
+                logger.warn('writeback: update failed', { id: ref.browserId, err });
+            }
+        }
+
+        // 移动（父变化或位置变化）
+        const targetParentStableId = mergedParentOf.get(stableId);
+        let moveTarget: { parentId?: string; index?: number } | null = null;
+        if (targetParentStableId !== ref.parentStableId) {
+            const parentRef = targetParentStableId ? localRefs.get(targetParentStableId) : undefined;
+            const parentId = parentRef?.browserId ?? resolveRootTargetBrowserId(node, browserType);
+            moveTarget = { parentId, index: node.index };
+        } else if (node.index !== undefined && node.index !== ref.index) {
+            moveTarget = { parentId: ref.parentBrowserId, index: node.index };
+        }
+        if (moveTarget) {
+            try {
+                await browser.bookmarks.move(ref.browserId, moveTarget);
+                stats.moved++;
+            } catch (err) {
+                logger.debug('writeback: move failed', { id: ref.browserId, err });
+            }
+        }
+    }
+
+    logger.info(`applyMergeToLocalTree: 写回完成`, { ...stats });
+    return stats;
 }
 
 /**
@@ -479,9 +746,9 @@ export async function performSync(): Promise<SyncResult> {
             hasGistID: !!setting.gistID
         });
         
-        // 2. 获取本地书签
+        // 2. 获取本地书签（剥根 + 标准化，与远程数据格式一致 P0-4）
         logger.debug('performSync: 步骤2 - 获取本地书签...');
-        const localBookmarks = await getBookmarks();
+        const localBookmarks = await getLocalBookmarkTree();
         const localCount = getBookmarkCount(localBookmarks);
         logger.info(`performSync: 本地书签获取成功，共 ${localCount} 个`);
         
@@ -497,9 +764,7 @@ export async function performSync(): Promise<SyncResult> {
         
         // 4. 标准化 ID - 确保本地和远程使用相同的稳定 ID
         logger.debug('performSync: 步骤4 - 标准化书签ID...');
-        normalizeBookmarkIds(localBookmarks);
-        logger.info('performSync: 本地书签ID标准化完成');
-        if (remoteBookmarks) {
+        if (remoteBookmarks.length > 0) {
             normalizeBookmarkIds(remoteBookmarks);
             logger.info('performSync: 远程书签ID标准化完成');
         }
@@ -507,7 +772,10 @@ export async function performSync(): Promise<SyncResult> {
         // 5. 获取本地缓存作为基准点（baseline）
         logger.debug('performSync: 步骤5 - 获取本地缓存作为基准点...');
         const localCache = await getLocalCache();
-        const baseline = localCache?.backupRecords?.[0]?.bookmarkData || null;
+        // 基线同样按当前稳定 ID 方案重新标准化，保证与本地/远程可比
+        // （方案升级后旧缓存的 ID 与新 ID 不同，不重标准化会导致误判删除+新建）
+        const baselineRaw = localCache?.backupRecords?.[0]?.bookmarkData || null;
+        const baseline = baselineRaw ? normalizeBookmarkIds(normalizeTreeShape(baselineRaw)) : null;
         const localTombstones = localCache?.tombstones || [];
         logger.info('performSync: 基准点获取完成', {
             hasBaseline: !!baseline,
@@ -539,28 +807,42 @@ export async function performSync(): Promise<SyncResult> {
             changeSummary: mergeResult.changeSummary
         });
 
-        // 8. 如果有变更，上传合并后的数据
+        // 8. 如果有变更：先写回本地书签树，再上传（P0-2）
+        //    finalTree 是"写回后的真实本地树"，作为上传内容与新基线，
+        //    保证 远程 == 基线 == 本地 三者一致，避免下次同步产生虚假变更
+        let finalTree = mergeResult.merged;
         if (mergeResult.hasChanges) {
-            logger.debug('performSync: 步骤8 - 有变更，上传合并后的数据...');
-            await uploadBookmarks(mergeResult.merged, mergeResult.tombstones);
+            logger.debug('performSync: 步骤8 - 应用合并结果到本地书签树...');
+            isBulkBookmarkOperation = true;
+            try {
+                await applyMergeToLocalTree(mergeResult.merged);
+                // 以写回后的真实本地树为准（浏览器生成的 dateAdded/index 与 merged 不同）
+                finalTree = await getLocalBookmarkTree();
+            } catch (writebackError) {
+                // 写回失败时退回旧行为：以 merged 为准上传，本地树保持现状
+                logger.error('performSync: 写回本地书签树失败，退回合并结果', writebackError);
+                finalTree = mergeResult.merged;
+            } finally {
+                isBulkBookmarkOperation = false;
+            }
+
+            logger.debug('performSync: 步骤8b - 上传合并后的数据...');
+            await uploadSnapshot(finalTree, mergeResult.tombstones);
             logger.info('performSync: 上传完成');
         } else {
-            logger.debug('performSync: 步骤8 - 无变更，跳过上传');
+            logger.debug('performSync: 步骤8 - 无变更，跳过写回与上传');
         }
 
-        // 9. 更新本地缓存为新基准点
+        // 9. 更新本地缓存为新基准点（以真实树为准）
         logger.debug('performSync: 步骤9 - 更新本地缓存为新基准点...');
         const newCache: SyncData = {
             version: '2.0',
             lastSyncTimestamp: Date.now(),
-            sourceBrowser: {
-                browser: getBrowserName(navigator.userAgent),
-                os: getOsFromUserAgent(navigator.userAgent)
-            },
+            sourceBrowser: getBrowserInfo(),
             backupRecords: [{
                 backupTimestamp: Date.now(),
-                bookmarkData: mergeResult.merged,
-                bookmarkCount: getBookmarkCount(mergeResult.merged)
+                bookmarkData: finalTree,
+                bookmarkCount: getBookmarkCount(finalTree)
             }],
             tombstones: mergeResult.tombstones
         };
@@ -569,8 +851,8 @@ export async function performSync(): Promise<SyncResult> {
 
         // 10. 设置成功状态和统计
         result.status = 'success';
-        result.localCount = localCount;
-        result.remoteCount = getBookmarkCount(mergeResult.merged);
+        result.localCount = getBookmarkCount(finalTree);
+        result.remoteCount = getBookmarkCount(finalTree);
         result.conflictCount = mergeResult.conflicts.length;
         logger.debug('performSync: 步骤10 - 设置成功状态', result);
 
@@ -603,28 +885,31 @@ export async function performSync(): Promise<SyncResult> {
         isSuppressingEvents = false;
         logger.info(`performSync: 释放同步锁 isSyncing=false, isSuppressingEvents=false`);
         await clearSyncState();
+        // P1-1: 重放同步期间排队的事件（用户操作不丢失，墓碑/计数回调补执行）
+        await replayPendingBookmarkEvents();
     }
     
     return result;
 }
 
 /**
- * 上传书签数据
- * 根据存储类型上传到 GitHub Gist 或 WebDAV
- * 上传前会先保存现有远程数据到备份记录
+ * 上传书签快照（自动同步与手动上传共用的统一上传路径 P0-3/P0-4）
  *
- * @param bookmarks - 要上传的书签数据
- * @param tombstones - 合并后的墓碑数据（可选）
+ * 读取现有远程数据以保留备份历史，将新快照追加为最新备份记录，
+ * 合并墓碑后整体写回。序列化使用紧凑格式以控制远程文件体积。
+ *
+ * @param bookmarks - 要上传的书签树（剥根格式，ID 已标准化）
+ * @param tombstones - 要写入的墓碑（调用方负责合并双方墓碑）
+ * @returns Promise<SyncData> 实际上传的同步数据
  */
-async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[] = []): Promise<void> {
+export async function uploadSnapshot(bookmarks: BookmarkInfo[], tombstones: Tombstone[] = []): Promise<SyncData> {
     const setting = await Setting.build();
 
     // 步骤1: 获取现有远程数据
-    logger.debug('uploadBookmarks: 步骤1 - 获取现有远程数据...');
+    logger.debug('uploadSnapshot: 步骤1 - 获取现有远程数据...');
     const existingData = await _fetchRemoteData(setting);
 
     // 步骤2: 创建新的备份记录
-    logger.debug('uploadBookmarks: 步骤2 - 创建新的备份记录...');
     const newRecord: BackupRecord = {
         backupTimestamp: Date.now(),
         bookmarkData: bookmarks,
@@ -632,29 +917,29 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
     };
 
     // 步骤3: 构建 v2.0 格式的数据
-    logger.debug('uploadBookmarks: 步骤3 - 构建 v2.0 格式数据...');
     const uploadData: SyncData = {
         version: '2.0',
         lastSyncTimestamp: Date.now(),
-        sourceBrowser: {
-            browser: getBrowserName(navigator.userAgent),
-            os: getOsFromUserAgent(navigator.userAgent)
-        },
+        sourceBrowser: getBrowserInfo(),
         backupRecords: [newRecord],
         tombstones: tombstones
     };
-    
-    // 步骤4: 追加现有数据（迁移旧格式）
+
+    // 步骤4: 追加现有数据（保留远程备份历史，迁移 v1 旧格式）
     if (existingData) {
         if (_isSyncData(existingData)) {
-            // 现有数据已经是 v2.0 格式
             const remote = existingData as SyncData;
             uploadData.backupRecords.push(...remote.backupRecords || []);
+            // 保留远程已有墓碑，防止手动上传清空删除记录
+            const remoteTombstones = remote.tombstones || [];
+            if (remoteTombstones.length > 0) {
+                uploadData.tombstones = mergeTombstones(remoteTombstones, tombstones);
+            }
         } else {
             // 旧格式 (SyncDataInfo)，转为历史备份记录
             const old = existingData as SyncDataInfo;
             const oldRecord: BackupRecord = {
-                backupTimestamp: old.createDate || Date.now() - 1000,
+                backupTimestamp: old.createDate ?? 0,
                 bookmarkData: old.bookmarks || [],
                 bookmarkCount: getBookmarkCount(old.bookmarks || [])
             };
@@ -663,28 +948,27 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
             }
         }
     }
-    
-    // 步骤5: 限制备份数量
+
+    // 步骤5: 限制备份数量并按时间降序排列
     while (uploadData.backupRecords.length > BACKUP_DEFAULTS.MAX_BACKUPS) {
         uploadData.backupRecords.pop();
     }
-    
-    logger.info(`uploadBookmarks: 总计 ${uploadData.backupRecords.length} 个备份记录...`);
-    
-    // 序列化为 JSON
-    const content = JSON.stringify(uploadData, null, 2);
-    logger.debug(`uploadBookmarks: 步骤6 - 上传数据 (${getBookmarkCount(bookmarks)} 个书签)...`);
-    
+    uploadData.backupRecords = sortBackupRecords(uploadData.backupRecords);
+
+    // 序列化为紧凑 JSON
+    const content = JSON.stringify(uploadData);
+    logger.debug(`uploadSnapshot: 上传数据 (${getBookmarkCount(bookmarks)} 个书签, ${uploadData.backupRecords.length} 份备份)...`);
+
     // 步骤6: 根据存储类型选择上传方式
     if (setting.storageType === 'webdav') {
         const writeSucceeded = await webdavWrite(content);
         if (!writeSucceeded) {
             throw createError.networkError('WebDAV upload failed');
         }
-        logger.info('uploadBookmarks: WebDAV 上传完成');
-        return;
+        logger.info('uploadSnapshot: WebDAV 上传完成');
+        return uploadData;
     }
-    
+
     // GitHub Gist 上传
     await BookmarkService.update({
         files: {
@@ -694,29 +978,8 @@ async function uploadBookmarks(bookmarks: BookmarkInfo[], tombstones: Tombstone[
         },
         description: setting.gistFileName
     });
-    logger.info('uploadBookmarks: GitHub Gist 上传完成');
-}
-
-/**
- * Helper function to get browser name from user agent
- */
-function getBrowserName(userAgent: string): string {
-    if (userAgent.includes('Firefox')) return 'Firefox';
-    if (userAgent.includes('Edg')) return 'Edge';
-    if (userAgent.includes('Chrome')) return 'Chrome';
-    return 'Unknown';
-}
-
-/**
- * Helper function to get OS from user agent
- */
-function getOsFromUserAgent(userAgent: string): string {
-    if (userAgent.includes('Win')) return 'Windows';
-    if (userAgent.includes('Mac')) return 'macOS';
-    if (userAgent.includes('Linux')) return 'Linux';
-    if (userAgent.includes('Android')) return 'Android';
-    if (userAgent.includes('iOS')) return 'iOS';
-    return 'Unknown';
+    logger.info('uploadSnapshot: GitHub Gist 上传完成');
+    return uploadData;
 }
 
 /**

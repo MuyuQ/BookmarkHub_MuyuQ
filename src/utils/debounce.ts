@@ -257,11 +257,6 @@ export class SyncDebouncer {
 }
 
 /**
- * 全局锁管理器实例
- */
-export const lockManager = new LockManager();
-
-/**
  * 全局同步防抖器实例
  */
 export const syncDebouncer = new SyncDebouncer();

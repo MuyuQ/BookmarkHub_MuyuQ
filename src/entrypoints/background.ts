@@ -1,5 +1,5 @@
 import { Setting } from '../utils/setting'
-import { startAutoSync, stopAutoSync, performSync, getIsSyncing, getIsSuppressingEvents, registerBookmarkEventCallback, beginBulkBookmarkOperation, endBulkBookmarkOperation } from '../utils/sync'
+import { startAutoSync, stopAutoSync, performSync, getIsSyncing, registerBookmarkEventCallback, beginBulkBookmarkOperation, endBulkBookmarkOperation } from '../utils/sync'
 import optionsStorage from '../utils/optionsStorage'
 import iconLogo from '../assets/icon.png'
 import { BookmarkInfo, RootBookmarksType, BrowserType } from '../utils/models'
@@ -7,7 +7,7 @@ import { Bookmarks } from 'wxt/browser'
 import { getBookmarkCount, generateStableId, normalizeTreeShape } from '../utils/bookmarkUtils'
 import { handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
-import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS, MV3_CONFIG } from '../utils/constants'
+import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS, MV3_CONFIG, MESSAGE_NAMES } from '../utils/constants'
 import { getBackupRecords, restoreFromBackup, deleteBackupRecord, getLocalCache, saveLocalCache, createEmptyLocalCache } from '../utils/localCache'
 import { getBrowserInfo } from '../utils/browserInfo'
 import { Tombstone } from '../utils/models'
@@ -50,7 +50,10 @@ export default defineBackground(() => {
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === MV3_CONFIG.SYNC_ALARM_NAME) {
       logger.info('Alarm 触发定时同步', { alarmName: alarm.name });
-      performSync().catch(err => logger.error('alarm sync failed', err));
+      // P3: 与 upload/download 等操作共享同一串行队列，避免并发读写远程
+      queueOperation(async () => {
+        await performSync();
+      }).catch(err => logger.error('alarm sync failed', err));
     }
   });
 
@@ -138,7 +141,7 @@ export default defineBackground(() => {
       return false;
     }
     
-    if (msg.name === 'upload') {
+    if (msg.name === MESSAGE_NAMES.UPLOAD) {
       queueOperation(async () => {
         try {
           await uploadBookmarks();
@@ -152,7 +155,7 @@ export default defineBackground(() => {
       });
       return true;
     }
-    if (msg.name === 'download') {
+    if (msg.name === MESSAGE_NAMES.DOWNLOAD) {
       queueOperation(async () => {
         // 检查是否正在同步
         if (getIsSyncing()) {
@@ -174,7 +177,7 @@ export default defineBackground(() => {
       });
       return true;
     }
-    if (msg.name === 'removeAll') {
+    if (msg.name === MESSAGE_NAMES.REMOVE_ALL) {
       queueOperation(async () => {
         try {
           await clearBookmarkTree();
@@ -206,15 +209,15 @@ export default defineBackground(() => {
       });
       return true;
     }
-    if (msg.name === 'setting') {
+    if (msg.name === MESSAGE_NAMES.SETTING) {
       browser.runtime.openOptionsPage().then(() => {
         safeSendResponse(sendResponse, true);
       });
       return true;
     }
-    if (msg.name === 'sync') {
-      // performSync 内部已有 isSyncing 检查
-      performSync()
+    if (msg.name === MESSAGE_NAMES.SYNC) {
+      // P3: 进入操作队列串行执行；performSync 内部另有锁与"进行中则跳过"检查
+      queueOperation(async () => performSync())
         .then(result => {
           safeSendResponse(sendResponse, result);
         })
@@ -223,13 +226,13 @@ export default defineBackground(() => {
         });
       return true;
     }
-    if (msg.name === 'getBackupRecords') {
+    if (msg.name === MESSAGE_NAMES.GET_BACKUP_RECORDS) {
       getBackupRecords().then(records => {
         safeSendResponse(sendResponse, records);
       });
       return true;
     }
-    if (msg.name === 'restoreFromBackup') {
+    if (msg.name === MESSAGE_NAMES.RESTORE_FROM_BACKUP) {
       queueOperation(async () => {
         try {
           const bookmarks = await restoreFromBackup(msg.timestamp);
@@ -261,7 +264,7 @@ export default defineBackground(() => {
       });
       return true;
     }
-    if (msg.name === 'deleteBackupRecord') {
+    if (msg.name === MESSAGE_NAMES.DELETE_BACKUP_RECORD) {
       deleteBackupRecord(msg.timestamp).then(success => {
         safeSendResponse(sendResponse, { success });
       });
@@ -412,7 +415,7 @@ export default defineBackground(() => {
   
   async function notifyRefreshCounts(): Promise<void> {
     try {
-      await browser.runtime.sendMessage({ name: 'refreshCounts' });
+      await browser.runtime.sendMessage({ name: MESSAGE_NAMES.REFRESH_COUNTS });
     } catch {
       // popup 可能未打开，忽略错误
     }

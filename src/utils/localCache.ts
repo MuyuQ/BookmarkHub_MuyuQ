@@ -79,20 +79,6 @@ export function createEmptyLocalCache(): SyncData {
 }
 
 /**
- * 初始化本地缓存
- * 如果缓存不存在或无效，创建空缓存
- * 
- * @returns Promise<SyncData> 有效的本地缓存
- */
-export async function initLocalCache(): Promise<SyncData> {
-    const cache = await getLocalCache();
-    if (cache) {
-        return cache;
-    }
-    return createEmptyLocalCache();
-}
-
-/**
  * 验证备份数据完整性
  * 确保备份记录按时间戳降序排列（最新的在前，允许同时间戳）。
  * 不做严格降序要求：设备间时钟偏差会产生"旧记录时间戳更新"的合法数据，
@@ -157,87 +143,6 @@ export function validateSyncData(data: SyncData): boolean {
     }
 
     return validateBackupRecords(data.backupRecords);
-}
-
-/**
- * 创建新的备份记录
- * 
- * @param bookmarkData - 书签数据
- * @param timestamp - 备份时间戳（可选，默认当前时间）
- * @returns BackupRecord 新的备份记录
- */
-export function createBackupRecord(
-    bookmarkData: BookmarkInfo[], 
-    timestamp: number = Date.now()
-): BackupRecord {
-    return {
-        backupTimestamp: timestamp,
-        bookmarkData,
-        bookmarkCount: getBookmarkCount(bookmarkData)
-    };
-}
-
-/**
- * 创建新的同步数据
- * 
- * @param bookmarkData - 书签数据
- * @param maxBackups - 最大备份数量（可选）
- * @returns SyncData 新的同步数据
- */
-export function createSyncData(
-    bookmarkData: BookmarkInfo[],
-    maxBackups: number = BACKUP_DEFAULTS.MAX_BACKUPS
-): SyncData {
-    const now = Date.now();
-    const backupRecord = createBackupRecord(bookmarkData, now);
-
-    return {
-        version: '2.0',
-        lastSyncTimestamp: now,
-        sourceBrowser: getBrowserInfo(),
-        backupRecords: [backupRecord].slice(0, maxBackups),
-        tombstones: []
-    };
-}
-
-/**
- * 将新备份记录插入到同步数据
- * 自动处理数量限制和排序
- * 
- * @param syncData - 原同步数据
- * @param newRecord - 新备份记录
- * @param maxBackups - 最大备份数量
- * @returns SyncData 更新后的同步数据
- */
-export function insertBackupRecord(
-    syncData: SyncData, 
-    newRecord: BackupRecord, 
-    maxBackups: number = BACKUP_DEFAULTS.MAX_BACKUPS
-): SyncData {
-    const records = [newRecord, ...syncData.backupRecords];
-    
-    while (records.length > maxBackups) {
-        records.pop();
-    }
-    
-    return {
-        ...syncData,
-        backupRecords: records
-    };
-}
-
-/**
- * 更新同步数据的元信息
- * 
- * @param syncData - 原同步数据
- * @returns SyncData 更新后的同步数据
- */
-export function updateSyncMetadata(syncData: SyncData): SyncData {
-    return {
-        ...syncData,
-        lastSyncTimestamp: Date.now(),
-        sourceBrowser: getBrowserInfo()
-    };
 }
 
 /**

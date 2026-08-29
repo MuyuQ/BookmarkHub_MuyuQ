@@ -5,6 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './options.css'
 import { getAllDecrypted, setEncrypted } from '../../utils/optionsStorage'
 import { testWebDAVConnection } from '../../utils/webdav'
+import { MESSAGE_NAMES } from '../../utils/constants'
 import { BackupRecord } from '../../utils/models'
 
 const Options: React.FC = () => {
@@ -37,7 +38,7 @@ const Options: React.FC = () => {
     const [restoreStatus, setRestoreStatus] = useState<'idle' | 'restoring' | 'success' | 'error'>('idle');
     
     const loadBackupRecords = async () => {
-        const records = await browser.runtime.sendMessage({ name: 'getBackupRecords' });
+        const records = await browser.runtime.sendMessage({ name: MESSAGE_NAMES.GET_BACKUP_RECORDS });
         setBackupRecords(records || []);
     };
     
@@ -51,7 +52,7 @@ const Options: React.FC = () => {
         setRestoreStatus('restoring');
         try {
             const result = await browser.runtime.sendMessage({ 
-                name: 'restoreFromBackup', 
+                name: MESSAGE_NAMES.RESTORE_FROM_BACKUP, 
                 timestamp: selectedBackup.backupTimestamp 
             });
             if (result.success) {
@@ -70,7 +71,7 @@ const Options: React.FC = () => {
     
     const handleDeleteBackup = async (timestamp: number) => {
         if (confirm(browser.i18n.getMessage('confirmDeleteBackup') || 'Delete this backup?')) {
-            await browser.runtime.sendMessage({ name: 'deleteBackupRecord', timestamp });
+            await browser.runtime.sendMessage({ name: MESSAGE_NAMES.DELETE_BACKUP_RECORD, timestamp });
             loadBackupRecords();
         }
     };

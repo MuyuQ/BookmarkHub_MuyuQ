@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectChanges, formatChangeSummary } from './changeDetection'
+import { detectChanges } from './changeDetection'
 import { BookmarkInfo } from './models'
 
 describe('detectChanges', () => {
@@ -96,35 +96,5 @@ describe('detectChanges', () => {
 
     expect(result.hasChanges).toBe(true)
     expect(result.created).toHaveLength(1)
-  })
-})
-
-describe('formatChangeSummary', () => {
-  it('should return "无变更" for no changes', () => {
-    const result = {
-      changes: [],
-      created: [],
-      modified: [],
-      deleted: [],
-      moved: [],
-      hasChanges: false,
-    }
-
-    expect(formatChangeSummary(result)).toBe('无变更')
-  })
-
-  it('should format multiple change types', () => {
-    const result = {
-      changes: [],
-      created: [{ type: 'created' as const, bookmark: {} as BookmarkInfo, timestamp: 0 }],
-      modified: [{ type: 'modified' as const, bookmark: {} as BookmarkInfo, timestamp: 0 }],
-      deleted: [],
-      moved: [],
-      hasChanges: true,
-    }
-
-    const summary = formatChangeSummary(result)
-    expect(summary).toContain('新增 1 个')
-    expect(summary).toContain('修改 1 个')
   })
 })

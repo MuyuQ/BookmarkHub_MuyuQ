@@ -24,7 +24,7 @@ const FORBIDDEN_PATH_PATTERNS = /\.\.|\/\/|\\|\0|\u0000/g;
  * @param path - 原始路径
  * @returns 清理后的安全路径
  */
-function sanitizePath(path: string): string {
+export function sanitizePath(path: string): string {
     if (!path || typeof path !== 'string') {
         return '/';
     }
@@ -159,11 +159,15 @@ export class WebDAVClient {
 
     /**
      * 读取文件
-     * 使用 WebDAV GET 方法读取文件内容
-     * 支持自动重试
-     * 
+     * 使用 WebDAV GET 方法读取文件内容，支持自动重试
+     *
+     * 错误语义（与 GitHub Gist 路径统一，P3 错误体系统一）:
+     * - 404 → 返回 null（远端尚无数据，不是错误）
+     * - 其他失败 → 抛出异常（此前吞错返回 null 会让上层把"读取失败"
+     *   当作"远程无数据"继续执行，存在用本地快照覆盖远程的风险）
+     *
      * @param path - 文件路径
-     * @returns Promise<string | null> 文件内容，失败返回 null
+     * @returns Promise<string | null> 文件内容，远端无数据返回 null
      */
     async read(path: string): Promise<string | null> {
         try {
@@ -175,6 +179,9 @@ export class WebDAVClient {
                     }
                 });
 
+                if (response.status === 404) {
+                    return null;
+                }
                 if (!response.ok) {
                     throw new Error(`WebDAV read failed: ${response.status}`);
                 }
@@ -183,7 +190,7 @@ export class WebDAVClient {
             }, { maxRetries: 3, logRetries: true });
         } catch (error) {
             logger.error('WebDAV read error', error);
-            return null;
+            throw error;
         }
     }
 

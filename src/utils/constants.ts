@@ -10,6 +10,19 @@ export const HTTP_TIMEOUTS = {
   WEBDAV: 30000,
 } as const;
 
+// 跨上下文消息协议（background <-> popup/options/sync）
+export const MESSAGE_NAMES = {
+  UPLOAD: 'upload',
+  DOWNLOAD: 'download',
+  REMOVE_ALL: 'removeAll',
+  SETTING: 'setting',
+  SYNC: 'sync',
+  GET_BACKUP_RECORDS: 'getBackupRecords',
+  RESTORE_FROM_BACKUP: 'restoreFromBackup',
+  DELETE_BACKUP_RECORD: 'deleteBackupRecord',
+  REFRESH_COUNTS: 'refreshCounts',
+} as const;
+
 // 存储键名
 export const STORAGE_KEYS = {
   LOCAL_COUNT: 'localCount',

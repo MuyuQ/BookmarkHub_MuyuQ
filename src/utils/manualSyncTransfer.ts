@@ -15,8 +15,7 @@ import { normalizeBookmarkIds, normalizeTreeShape, filterTombstonedNodes, getBoo
 import { mergeTombstones } from './merge';
 import { getLocalCache, saveLocalCache } from './localCache';
 import { getBrowserInfo } from './browserInfo';
-import BookmarkService from './services';
-import { webdavRead } from './webdav';
+import { getStorageProvider } from './sync/storageProvider';
 import { createError } from './errors';
 import { safeJsonParse, sanitizeBookmarkTree } from './sanitize';
 import { logger } from './logger';
@@ -59,9 +58,8 @@ export async function uploadManualBookmarks(setting: Setting, bookmarks: Bookmar
 }
 
 export async function downloadManualBookmarks(setting: Setting): Promise<BookmarkInfo[]> {
-    const content = setting.storageType === 'webdav'
-        ? await webdavRead()
-        : await BookmarkService.get();
+    // P3 架构重构：统一存储后端抽象
+    const content = await getStorageProvider(setting).read();
 
     if (!content) {
         const remoteName = setting.storageType === 'webdav' ? setting.webdavPath : setting.gistFileName;

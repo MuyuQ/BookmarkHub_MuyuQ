@@ -134,7 +134,7 @@ describe('WebDAVClient', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null on network error', async () => {
+    it('should throw on network error (errors are no longer swallowed as null)', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
       const client = new WebDAVClient(
@@ -143,9 +143,9 @@ describe('WebDAVClient', () => {
         'pass'
       );
 
-      const result = await client.read('/file.txt');
-
-      expect(result).toBeNull();
+      // P3 错误语义统一：读取失败抛错，与 Gist 路径一致；
+      // 仅 404（远端无数据）返回 null
+      await expect(client.read('/file.txt')).rejects.toThrow('Network error');
     });
   });
 

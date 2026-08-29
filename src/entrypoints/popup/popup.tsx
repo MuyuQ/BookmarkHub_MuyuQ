@@ -10,20 +10,30 @@ import {
 import { exportBookmarks } from '../../utils/exporter'
 import { importBookmarks } from '../../utils/importer'
 import { flattenBookmarks } from '../../utils/bookmarkUtils'
+import { MESSAGE_NAMES, STORAGE_KEYS } from '../../utils/constants'
 import iconLogo from '../../assets/icon.png'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './popup.css'
 
+/** 允许发送给 background 的操作白名单（P3 消息协议常量化） */
+const ALLOWED_ACTIONS: ReadonlySet<string> = new Set<string>([
+    MESSAGE_NAMES.UPLOAD,
+    MESSAGE_NAMES.DOWNLOAD,
+    MESSAGE_NAMES.SETTING,
+]);
+
 const Popup: React.FC = () => {
     const [count, setCount] = useState({ local: "0", remote: "0" })
-    
+
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
             const elem = e.target as HTMLElement;
             // 只禁用有 name 属性的 dropdown-item（同步操作），不影响 Export/Import/Settings
             if (elem != null && elem.classList.contains('dropdown-item') && elem.getAttribute('name')) {
+                const action = elem.getAttribute('name') as string;
+                if (!ALLOWED_ACTIONS.has(action)) return;
                 elem.setAttribute('disabled', 'disabled');
-                browser.runtime.sendMessage({ name: elem.getAttribute('name') })
+                browser.runtime.sendMessage({ name: action })
                     .then(() => {
                         elem.removeAttribute('disabled');
                     })
@@ -33,30 +43,30 @@ const Popup: React.FC = () => {
             }
         };
         document.addEventListener('click', handleClick);
-        
+
         return () => {
             document.removeEventListener('click', handleClick);
         };
     }, [])
-    
+
     useEffect(() => {
         const getSetting = async () => {
-            let data = await browser.storage.local.get(["localCount", "remoteCount"]);
-            setCount({ 
-                local: String(data["localCount"] || 0), 
-                remote: String(data["remoteCount"] || 0) 
+            let data = await browser.storage.local.get([STORAGE_KEYS.LOCAL_COUNT, STORAGE_KEYS.REMOTE_COUNT]);
+            setCount({
+                local: String(data[STORAGE_KEYS.LOCAL_COUNT] || 0),
+                remote: String(data[STORAGE_KEYS.REMOTE_COUNT] || 0)
             });
         }
         getSetting();
-        
+
         // 监听同步完成消息，刷新数量显示
         const handleMessage = (message: { name: string }) => {
-            if (message.name === 'refreshCounts') {
+            if (message.name === MESSAGE_NAMES.REFRESH_COUNTS) {
                 getSetting();
             }
         };
         browser.runtime.onMessage.addListener(handleMessage);
-        
+
         return () => {
             browser.runtime.onMessage.removeListener(handleMessage);
         };

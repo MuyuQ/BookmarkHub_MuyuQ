@@ -125,30 +125,38 @@ export class Setting extends SettingBase {
         // 创建新的 Setting 实例
         const setting = new Setting();
         
+        // 类型化取值：getAllDecrypted 返回 Record<string, unknown>，
+        // 用运行时类型检查代替 as 断言（P3 类型收紧），字段缺失/类型不符时取默认值
+        const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+        const bool = (v: unknown): boolean => v === true;
+        const num = (v: unknown, fallback: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
+        const oneOf = <T extends string>(v: unknown, allowed: readonly T[], fallback: T): T =>
+            (typeof v === 'string' && (allowed as readonly string[]).includes(v) ? (v as T) : fallback);
+
         // 复制 GitHub Gist 相关设置
-        setting.gistID = options.gistID as string;
-        setting.gistFileName = options.gistFileName as string;
-        setting.githubToken = options.githubToken as string;
-        setting.enableNotify = options.enableNotify as boolean;
-        
-        // 复制自动同步设置 (使用类型断言确保类型安全)
-        setting.enableAutoSync = Boolean(options.enableAutoSync);
-        setting.enableIntervalSync = Boolean(options.enableIntervalSync);
-        setting.enableEventSync = Boolean(options.enableEventSync);
-        setting.syncInterval = Number(options.syncInterval) || 60;
-        setting.conflictMode = (options.conflictMode as 'auto' | 'prompt') || 'auto';
-        
+        setting.gistID = str(options.gistID);
+        setting.gistFileName = str(options.gistFileName);
+        setting.githubToken = str(options.githubToken);
+        setting.enableNotify = bool(options.enableNotify);
+
+        // 复制自动同步设置
+        setting.enableAutoSync = bool(options.enableAutoSync);
+        setting.enableIntervalSync = bool(options.enableIntervalSync);
+        setting.enableEventSync = bool(options.enableEventSync);
+        setting.syncInterval = num(options.syncInterval, 60);
+        setting.conflictMode = oneOf(options.conflictMode, ['auto', 'prompt'] as const, 'auto');
+
         // 复制存储服务设置
-        setting.storageType = (options.storageType as 'github' | 'webdav') || 'github';
-        
+        setting.storageType = oneOf(options.storageType, ['github', 'webdav'] as const, 'github');
+
         // 复制 WebDAV 设置 (密码已解密)
-        setting.webdavUrl = options.webdavUrl as string;
-        setting.webdavUsername = options.webdavUsername as string;
-        setting.webdavPassword = options.webdavPassword as string;
-        setting.webdavPath = options.webdavPath as string;
-        
+        setting.webdavUrl = str(options.webdavUrl);
+        setting.webdavUsername = str(options.webdavUsername);
+        setting.webdavPassword = str(options.webdavPassword);
+        setting.webdavPath = str(options.webdavPath) || WEBDAV_DEFAULTS.PATH;
+
         // 复制安全设置
-        setting.masterPassword = options.masterPassword as string;
+        setting.masterPassword = str(options.masterPassword);
 
         // 更新缓存
         Setting.cachedSetting = setting;

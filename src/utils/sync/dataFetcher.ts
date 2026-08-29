@@ -6,13 +6,12 @@
  */
 
 import { BookmarkInfo, SyncDataInfo, SyncData } from '../models';
-import BookmarkService from '../services';
-import { webdavRead } from '../webdav';
 import { logger } from '../logger';
 import { Setting } from '../setting';
 import { createError } from '../errors';
 import { normalizeTreeShape } from '../bookmarkUtils';
 import { safeJsonParse, sanitizeBookmarkTree } from '../sanitize';
+import { getStorageProvider } from './storageProvider';
 
 /** 远程数据最大允许大小 (10 MB) */
 const MAX_REMOTE_DATA_SIZE = 10 * 1024 * 1024;
@@ -73,16 +72,10 @@ export function extractBookmarksFromData(data: SyncData | SyncDataInfo | null): 
  * @returns Promise<SyncData | SyncDataInfo | null> 远程同步数据
  */
 export async function fetchRemoteData(setting: Setting): Promise<SyncData | SyncDataInfo | null> {
-    let content: string | null = null;
-    
-    // WebDAV 存储
-    if (setting.storageType === 'webdav') {
-        content = await webdavRead();
-    } else {
-        // GitHub Gist 存储
-        content = await BookmarkService.get();
-    }
-    
+    // P3 架构重构：通过存储后端抽象读取，Gist/WebDAV 分支收敛到 storageProvider
+    const provider = getStorageProvider(setting);
+    const content = await provider.read();
+
     if (!content) return null;
 
     // 检查远程数据大小，防止内存溢出

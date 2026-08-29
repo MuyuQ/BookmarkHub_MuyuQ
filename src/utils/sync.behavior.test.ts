@@ -10,7 +10,6 @@ vi.mock('./services', () => ({
   default: {
     update: vi.fn(),
   },
-  getBookmarks: vi.fn(),
 }));
 
 vi.mock('./webdav', () => ({
@@ -76,6 +75,11 @@ const mockBrowser = {
     create: vi.fn(),
   },
   bookmarks: {
+    getTree: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({ id: '11', title: '' }),
+    removeTree: vi.fn().mockResolvedValue(undefined),
+    update: vi.fn().mockResolvedValue({}),
+    move: vi.fn().mockResolvedValue({}),
     onCreated: {
       addListener: vi.fn(),
       removeListener: vi.fn(),
@@ -106,7 +110,6 @@ const mockBrowser = {
 globalThis.browser = mockBrowser;
 
 const { Setting } = await import('./setting');
-const { getBookmarks } = await import('./services');
 const { webdavWrite } = await import('./webdav');
 const { threeWayMerge } = await import('./merge');
 const { getLocalCache, saveLocalCache } = await import('./localCache');
@@ -134,9 +137,9 @@ describe('performSync behavior', () => {
       webdavUrl: 'https://example.com/dav',
       webdavUsername: 'dav-user',
     } as never);
-    vi.mocked(getBookmarks).mockResolvedValue([
-      { id: 'bookmark-1', title: 'Bookmark 1' },
-    ] as never);
+    mockBrowser.bookmarks.getTree.mockResolvedValue([
+      { id: '0', title: '', children: [{ id: '1', title: 'Bookmarks Bar', children: [{ id: '10', title: 'Bookmark 1', url: 'https://example.com' }] }] },
+    ]);
     vi.mocked(dataFetcher.fetchRemoteData).mockResolvedValue(null);
     vi.mocked(dataFetcher.extractBookmarksFromData).mockReturnValue(undefined);
     vi.mocked(dataFetcher.isSyncData).mockReturnValue(false);

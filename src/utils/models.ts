@@ -116,31 +116,6 @@ export enum BrowserType {
 }
 
 /**
- * 操作类型枚举
- * 用于标识当前正在执行的操作类型
- * 以避免操作过程中的事件监听触发不必要的逻辑
- * 
- * 在同步流程中的作用:
- * - NONE: 初始状态，无特殊操作
- * - SYNC: 同步操作进行中，抑制书签事件触发
- * - CHANGE/MOVE/CREATE/REMOVE: 标记特定书签操作，用于细粒度的事件处理
- */
-export enum OperType { 
-    /** 无操作 - 默认状态 */
-    NONE, 
-    /** 同步操作 - 批量同步书签时设置，防止事件递归触发 */
-    SYNC, 
-    /** 书签变更 - 书签属性修改时触发 */
-    CHANGE, 
-    /** 书签创建 - 新书签/文件夹创建时触发 */
-    CREATE, 
-    /** 书签移动 - 书签位置变更时触发 */
-    MOVE, 
-    /** 书签删除 - 书签/文件夹删除时触发 */
-    REMOVE 
-}
-
-/**
  * 根书签文件夹类型枚举
  * 定义浏览器中不同类型的根文件夹
  * 用于在同步时识别和转换不同浏览器的文件夹结构
@@ -155,37 +130,6 @@ export enum RootBookmarksType {
     /** 移动设备书签文件夹 */
     MobileFolder = "MobileFolder" 
 }
-
-/**
- * 同步记录接口
- */
-export const rootBookmarks: BookmarkInfo[] = [
-    {
-        // Firefox: menu________ / Chrome: 0
-        "id": "menu________",
-        "parentId": "0",
-        "title": RootBookmarksType.MenuFolder,
-        children: []
-    }, {
-        // Firefox: toolbar_____ / Chrome: 1
-        "id": "toolbar_____",
-        "parentId": "0",
-        "title": RootBookmarksType.ToolbarFolder,
-        children: []
-    }, {
-        // Firefox: unfiled_____ / Chrome: 2
-        "id": "unfiled_____",
-        "parentId": "0",
-        "title": RootBookmarksType.UnfiledFolder,
-        children: []
-    }, {
-        // Firefox: mobile______ / Chrome: 3
-        "id": "mobile______",
-        "parentId": "0",
-        "title": RootBookmarksType.MobileFolder,
-        children: []
-    }
-];
 
 /**
  * 同步方向类型

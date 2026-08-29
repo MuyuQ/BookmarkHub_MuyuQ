@@ -117,17 +117,3 @@ export function detectChanges(
     hasChanges: changes.length > 0,
   };
 }
-
-export function formatChangeSummary(result: ChangeDetectionResult): string {
-  if (!result.hasChanges) {
-    return '无变更';
-  }
-  
-  const parts: string[] = [];
-  if (result.created.length > 0) parts.push(`新增 ${result.created.length} 个`);
-  if (result.modified.length > 0) parts.push(`修改 ${result.modified.length} 个`);
-  if (result.deleted.length > 0) parts.push(`删除 ${result.deleted.length} 个`);
-  if (result.moved.length > 0) parts.push(`移动 ${result.moved.length} 个`);
-  
-  return parts.join('，');
-}

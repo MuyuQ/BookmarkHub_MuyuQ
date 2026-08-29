@@ -109,16 +109,6 @@ export interface GistUpdateData {
 }
 
 /**
- * GitHub Gist 列表响应接口
- */
-export interface GistListResponse {
-  id: string;
-  description: string | null;
-  public: boolean;
-  files: Record<string, { filename: string; raw_url: string }>;
-}
-
-/**
  * BookmarkService 类
  * 封装 GitHub Gist API 的所有操作
  * 使用单例模式导出
@@ -197,20 +187,11 @@ class BookmarkService {
     }
 
     /**
-     * 获取用户的所有 Gist 列表
-     * 
-     * @returns Promise<GistListResponse[]> Gist 列表响应
-     */
-    async getAllGist(): Promise<GistListResponse[]> {
-        return http.get('gists').json();
-    }
-
-    /**
      * 更新远程 Gist 中的书签数据
-     * 
+     *
      * @param data - 要更新的数据对象
      * @returns Promise<any> API 响应
-     * 
+     *
      * 使用 PATCH 方法更新 Gist
      * 只更新指定的文件名，保留其他文件不变
      */
@@ -237,18 +218,6 @@ class BookmarkService {
             }
         }, { maxRetries: 3, logRetries: true });
     }
-}
-
-/**
- * 获取本地浏览器书签树
- * 
- * @returns Promise<BookmarkInfo[]> 完整的书签树数组
- * 
- * 使用浏览器 bookmarks API 获取所有书签
- * 返回的是一个包含所有书签的树形结构数组
- */
-export async function getBookmarks(): Promise<BookmarkInfo[]> {
-    return await browser.bookmarks.getTree();
 }
 
 // 导出 BookmarkService 单例

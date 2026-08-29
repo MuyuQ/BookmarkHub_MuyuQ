@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import BookmarkService, { getBookmarks } from './services';
+import BookmarkService from './services';
 import type { BookmarkInfo } from './models';
 
 vi.mock('./setting', () => ({
@@ -262,49 +262,5 @@ describe('BookmarkService', () => {
     });
   });
 
-  describe('getAllGist()', () => {
-    it('should return list of gists', async () => {
-      const mockGistList = [
-        {
-          id: 'gist1',
-          description: 'First Gist',
-          public: false,
-          files: {
-            'file1.json': { filename: 'file1.json', raw_url: 'https://...' },
-          },
-        },
-        {
-          id: 'gist2',
-          description: 'Second Gist',
-          public: true,
-          files: {},
-        },
-      ];
-
-      vi.mocked(http.get).mockReturnValue({
-        json: vi.fn().mockResolvedValue(mockGistList),
-      } as any);
-
-      const result = await BookmarkService.getAllGist();
-
-      expect(result).toEqual(mockGistList);
-      expect(http.get).toHaveBeenCalledWith('gists');
-    });
-  });
 });
 
-describe('getBookmarks', () => {
-  it('should return bookmark tree from browser API', async () => {
-    const mockBookmarks: BookmarkInfo[] = [
-      { id: 'bm1', title: 'Bookmark 1', url: 'https://example.com/1' },
-      { id: 'bm2', title: 'Bookmark 2', url: 'https://example.com/2' },
-    ];
-
-    vi.mocked(mockBrowser.bookmarks.getTree).mockResolvedValue(mockBookmarks);
-
-    const result = await getBookmarks();
-
-    expect(result).toEqual(mockBookmarks);
-    expect(mockBrowser.bookmarks.getTree).toHaveBeenCalled();
-  });
-});

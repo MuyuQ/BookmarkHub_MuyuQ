@@ -17,6 +17,10 @@ vi.mock('./localCache', () => ({
   saveLocalCache: vi.fn(),
 }));
 
+vi.mock('./sync/storageProvider', () => ({
+  getStorageProvider: vi.fn(),
+}));
+
 vi.mock('./merge', () => ({
   // 模拟真实语义：同 id 保留最新
   mergeTombstones: vi.fn((local: Array<{ id: string; deletedAt: number }>, remote: Array<{ id: string; deletedAt: number }>) => {
@@ -44,7 +48,14 @@ vi.mock('./services', () => ({
 const { uploadSnapshot } = await import('./sync');
 const { fetchRemoteData } = await import('./sync/dataFetcher');
 const { getLocalCache, saveLocalCache } = await import('./localCache');
-const { webdavRead } = await import('./webdav');
+const { getStorageProvider } = await import('./sync/storageProvider');
+
+function mockProviderRead(content: string | null) {
+  vi.mocked(getStorageProvider).mockReturnValue({
+    read: vi.fn().mockResolvedValue(content),
+    write: vi.fn().mockResolvedValue(undefined),
+  });
+}
 
 const davSetting = {
   enableNotify: false,
@@ -74,6 +85,7 @@ describe('manualSyncTransfer', () => {
     vi.mocked(getLocalCache).mockResolvedValue(null);
     vi.mocked(saveLocalCache).mockResolvedValue(undefined);
     vi.mocked(fetchRemoteData).mockResolvedValue(null);
+    mockProviderRead(null);
   });
 
   it('uploads through the unified snapshot path and preserves remote backup history & tombstones', async () => {
@@ -145,7 +157,7 @@ describe('manualSyncTransfer', () => {
   it('downloads remote bookmarks through WebDAV and parses v2 payloads', async () => {
     const { downloadManualBookmarks } = await import('./manualSyncTransfer');
 
-    vi.mocked(webdavRead).mockResolvedValue(JSON.stringify({
+    mockProviderRead(JSON.stringify({
       backupRecords: [
         {
           backupTimestamp: Date.now(),
@@ -165,14 +177,14 @@ describe('manualSyncTransfer', () => {
       webdavPath: '/bookmarkhub-bookmarks.json',
     } as never);
 
-    expect(webdavRead).toHaveBeenCalledTimes(1);
+    expect(getStorageProvider).toHaveBeenCalledTimes(1);
     expect(result).toEqual([{ id: 'bookmark-1', title: 'Bookmark 1' }]);
   });
 
   it('throws a parse error instead of a raw SyntaxError when remote data is corrupted', async () => {
     const { downloadManualBookmarks } = await import('./manualSyncTransfer');
 
-    vi.mocked(webdavRead).mockResolvedValue('not-json{{{');
+    mockProviderRead('not-json{{{');
 
     await expect(
       downloadManualBookmarks({ gistFileName: 'BookmarkHub', storageType: 'webdav', webdavPath: '/x.json' } as never)

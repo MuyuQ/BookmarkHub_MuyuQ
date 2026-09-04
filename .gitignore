@@ -34,3 +34,8 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+
+__pycache__/
+*.pyc
+*.sync-conflict-*
+.venv/

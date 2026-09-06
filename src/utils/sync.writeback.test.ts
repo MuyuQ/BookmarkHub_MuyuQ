@@ -333,9 +333,13 @@ describe('P0-2: 合并结果写回本地书签树', () => {
 
     await performSync();
 
-    // 用户在本地删除 A（模拟 background 的删除事件流程：写墓碑到缓存）
-    const { generateStableId } = await import('./bookmarkUtils');
-    const stableId = generateStableId({ title: 'A', url: 'https://a.example.com' } as never);
+    // 用户在本地删除 A（模拟 background 的删除事件流程：写墓碑到缓存，
+    // 墓碑 ID 使用与 background.computeStableIdForRemovedNode 一致的公式：URL + 父路径）
+    const { generateStableId, buildChildPath } = await import('./bookmarkUtils');
+    const stableId = generateStableId(
+      { title: 'A', url: 'https://a.example.com' } as never,
+      buildChildPath('', '书签栏'),
+    );
     await store.removeTree('10');
 
     const cache = storageMap.get('bookmarkHubCache') as { tombstones: Array<{ id: string; deletedAt: number; deletedBy: string }>; backupRecords: unknown[] };
@@ -352,5 +356,148 @@ describe('P0-2: 合并结果写回本地书签树', () => {
     expect(store.root.children![0].children!.map(c => c.url)).not.toContain('https://a.example.com');
     const cacheAfter = storageMap.get('bookmarkHubCache') as { tombstones: Array<{ id: string }> };
     expect(cacheAfter.tombstones.some(t => t.id === stableId)).toBe(true);
+  });
+
+  it('P0-1: 重复 URL 书签删除其中一份不应误杀另一份', async () => {
+    // 初始：本地与远程都有同 URL 的两份书签（书签栏 + 其他书签），先同步建立基线
+    store.root.children![0].children = [
+      { id: '10', parentId: '1', title: 'A', url: 'https://a.example.com', index: 0, dateAdded: 1000 },
+    ];
+    store.root.children![1].children = [
+      { id: '20', parentId: '2', title: 'A', url: 'https://a.example.com', index: 0, dateAdded: 1100 },
+    ];
+    const remoteContent = JSON.stringify({
+      version: '2.0',
+      lastSyncTimestamp: Date.now(),
+      sourceBrowser: { browser: 'Firefox', os: 'Linux' },
+      backupRecords: [
+        {
+          backupTimestamp: Date.now(),
+          bookmarkCount: 2,
+          bookmarkData: [
+            { title: '书签栏', children: [{ title: 'A', url: 'https://a.example.com', index: 0 }] },
+            { title: '其他书签', children: [{ title: 'A', url: 'https://a.example.com', index: 0 }] },
+          ],
+        },
+      ],
+      tombstones: [],
+    });
+    vi.mocked(BookmarkService.get).mockResolvedValue(remoteContent);
+    let uploadedContent = '';
+    vi.mocked(BookmarkService.update).mockImplementation(async (payload: { files: Record<string, { content: string }> }) => {
+      uploadedContent = Object.values(payload.files)[0].content;
+      return {} as never;
+    });
+
+    const first = await performSync();
+    expect(first.status).toBe('success');
+
+    // 用户删除书签栏里的那份（墓碑用与 background 一致的公式）
+    const { generateStableId, buildChildPath } = await import('./bookmarkUtils');
+    const toolbarCopyId = generateStableId(
+      { title: 'A', url: 'https://a.example.com' } as never,
+      buildChildPath('', '书签栏'),
+    );
+    await store.removeTree('10');
+    const cache = storageMap.get('bookmarkHubCache') as { tombstones: Array<{ id: string; deletedAt: number; deletedBy: string }> };
+    cache.tombstones.push({ id: toolbarCopyId, deletedAt: Date.now(), deletedBy: 'test-device' });
+
+    // 下一次同步：只有书签栏那份被删除，其他书签里的副本应保留
+    vi.mocked(BookmarkService.get).mockResolvedValue(uploadedContent);
+    vi.mocked(BookmarkService.update).mockClear();
+
+    const result = await performSync();
+    expect(result.status).toBe('success');
+
+    // 其他书签里的副本未被误杀
+    expect(store.root.children![1].children!.map(c => c.url)).toContain('https://a.example.com');
+    expect(store.root.children![0].children!.map(c => c.url)).not.toContain('https://a.example.com');
+
+    // 上传内容仍包含该 URL，且墓碑只压制书签栏那份的路径
+    const uploaded = JSON.parse(uploadedContent) as { backupRecords: Array<{ bookmarkData: MemNode[] }>; tombstones: Array<{ id: string }> };
+    expect(JSON.stringify(uploaded.backupRecords[0].bookmarkData)).toContain('https://a.example.com');
+    expect(uploaded.tombstones.some(t => t.id === toolbarCopyId)).toBe(true);
+
+    // 第三次同步无变更（上传的墓碑不会反过来压制存活的副本）
+    vi.mocked(BookmarkService.get).mockResolvedValue(uploadedContent);
+    vi.mocked(BookmarkService.update).mockClear();
+    const third = await performSync();
+    expect(third.status).toBe('success');
+    expect(vi.mocked(BookmarkService.update)).not.toHaveBeenCalled();
+    expect(store.root.children![1].children!.map(c => c.url)).toContain('https://a.example.com');
+  });
+
+  it('P0-1: 同文件夹重复 URL 删除其一不误杀另一份（序号化 ID 端到端）', async () => {
+    // 初始：本地与远程在书签栏各有同 URL 的两份书签，先同步建立基线
+    store.root.children![0].children = [
+      { id: '10', parentId: '1', title: 'A', url: 'https://a.example.com', index: 0, dateAdded: 1000 },
+      { id: '11', parentId: '1', title: 'A 副本', url: 'https://a.example.com', index: 1, dateAdded: 1100 },
+    ];
+    const remoteContent = JSON.stringify({
+      version: '2.0',
+      lastSyncTimestamp: Date.now(),
+      sourceBrowser: { browser: 'Firefox', os: 'Linux' },
+      backupRecords: [
+        {
+          backupTimestamp: Date.now(),
+          bookmarkCount: 2,
+          bookmarkData: [
+            { title: '书签栏', children: [
+              { title: 'A', url: 'https://a.example.com', index: 0 },
+              { title: 'A 副本', url: 'https://a.example.com', index: 1 },
+            ] },
+            { title: '其他书签', children: [] },
+          ],
+        },
+      ],
+      tombstones: [],
+    });
+    vi.mocked(BookmarkService.get).mockResolvedValue(remoteContent);
+    let uploadedContent = '';
+    vi.mocked(BookmarkService.update).mockImplementation(async (payload: { files: Record<string, { content: string }> }) => {
+      uploadedContent = Object.values(payload.files)[0].content;
+      return {} as never;
+    });
+
+    const first = await performSync();
+    expect(first.status).toBe('success');
+
+    // 用户删除第二份（浏览器 id 11，removeInfo.index = 1），
+    // 墓碑用与 background.computeStableIdForRemovedNode 一致的公式（父路径 + 序号 1）
+    const { generateStableId, buildChildPath, duplicateIndexOf } = await import('./bookmarkUtils');
+    const currentChildren = store.root.children![0].children!;
+    const dupIndex = duplicateIndexOf(
+      currentChildren.filter(c => c.id !== '11') as never,
+      1,
+      { title: 'A 副本', url: 'https://a.example.com' } as never,
+    );
+    const duplicateId = generateStableId(
+      { title: 'A 副本', url: 'https://a.example.com' } as never,
+      buildChildPath('', '书签栏'),
+      dupIndex,
+    );
+    await store.removeTree('11');
+    const cache = storageMap.get('bookmarkHubCache') as { tombstones: Array<{ id: string; deletedAt: number; deletedBy: string }> };
+    cache.tombstones.push({ id: duplicateId, deletedAt: Date.now(), deletedBy: 'test-device' });
+
+    // 下一次同步：只有第二份被删除，第一份应保留
+    vi.mocked(BookmarkService.get).mockResolvedValue(uploadedContent);
+    vi.mocked(BookmarkService.update).mockClear();
+
+    const second = await performSync();
+    expect(second.status).toBe('success');
+
+    expect(store.root.children![0].children!.map(c => c.url)).toEqual(['https://a.example.com']);
+    const uploaded = JSON.parse(uploadedContent) as { backupRecords: Array<{ bookmarkData: Array<{ children?: Array<{ title: string }>; tombstones?: unknown }> }>; tombstones: Array<{ id: string }> };
+    const uploadedToolbar = uploaded.backupRecords[0].bookmarkData[0].children!;
+    expect(uploadedToolbar).toHaveLength(1);
+    expect(uploaded.tombstones.some(t => t.id === duplicateId)).toBe(true);
+
+    // 第三次同步无变更
+    vi.mocked(BookmarkService.get).mockResolvedValue(uploadedContent);
+    vi.mocked(BookmarkService.update).mockClear();
+    const third = await performSync();
+    expect(third.status).toBe('success');
+    expect(vi.mocked(BookmarkService.update)).not.toHaveBeenCalled();
   });
 });

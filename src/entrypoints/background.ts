@@ -4,7 +4,7 @@ import optionsStorage from '../utils/optionsStorage'
 import iconLogo from '../assets/icon.png'
 import { BookmarkInfo, RootBookmarksType, BrowserType } from '../utils/models'
 import { Bookmarks } from 'wxt/browser'
-import { getBookmarkCount, generateStableId, normalizeTreeShape } from '../utils/bookmarkUtils'
+import { getBookmarkCount, generateStableId, normalizeTreeShape, buildChildPath, duplicateIndexOf } from '../utils/bookmarkUtils'
 import { handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
 import { ROOT_NODE_IDS, ROOT_FOLDER_NAMES, STORAGE_KEYS, MV3_CONFIG, MESSAGE_NAMES } from '../utils/constants'
@@ -274,12 +274,12 @@ export default defineBackground(() => {
   });
 
   /**
-   * 在书签树中查找指定浏览器 ID 节点的路径（用于文件夹稳定 ID 计算）
-   * 路径格式与 generateStableId 的 parentPath 约定一致（'父路径/标题'）
+   * 在书签树中查找指定浏览器 ID 节点的路径（用于稳定 ID 计算的父路径）
+   * 路径格式与 buildChildPath 的约定一致（顶层使用类型化根 ID 前缀）
    */
   function findNodePath(nodes: BookmarkInfo[], targetId: string, parentPath: string = ''): string | null {
     for (const node of nodes) {
-      const path = parentPath ? `${parentPath}/${node.title}` : node.title;
+      const path = buildChildPath(parentPath, node.title);
       if (node.id === targetId) {
         return path;
       }
@@ -291,23 +291,41 @@ export default defineBackground(() => {
     return null;
   }
 
+  /** 按 id 在树中查找节点（墓碑计算用：被删节点的父级仍可在树中找到） */
+  function findNodeById(nodes: BookmarkInfo[], targetId: string): BookmarkInfo | null {
+    for (const node of nodes) {
+      if (node.id === targetId) return node;
+      if (node.children) {
+        const found = findNodeById(node.children, targetId);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
   /**
    * 计算被删除节点的稳定 ID
-   * 墓碑必须使用与合并层一致的稳定 ID（bm_<url哈希> / folder_<路径哈希>），
-   * 否则事件创建的墓碑永远无法匹配合并时的稳定 ID，删除会被"复活"
+   * 墓碑必须使用与合并层一致的稳定 ID（bm_<URL|父路径[|序号]哈希> / folder_<路径哈希>），
+   * 否则事件创建的墓碑永远无法匹配合并时的稳定 ID，删除会被"复活"。
+   * P0-1: 书签 ID 掺入父路径；同级重复项（同 URL/同名）还需序号参与哈希
    */
   async function computeStableIdForRemovedNode(
     node: { title: string; url?: string },
-    parentNodeId: string
+    parentNodeId: string,
+    nodeIndex?: number
   ): Promise<string> {
-    if (node.url) {
-      return generateStableId({ title: node.title, url: node.url } as BookmarkInfo);
-    }
-    // 文件夹：需要父路径参与哈希。节点已被删除，只能通过父节点反查路径
+    // 节点已被删除，通过父节点反查路径与同级序号（书签与文件夹统一）
     const tree = await getBookmarks();
     const stripped = normalizeTreeShape(tree);
     const parentPath = findNodePath(stripped, parentNodeId) || '';
-    return generateStableId({ title: node.title } as BookmarkInfo, parentPath);
+    let duplicateIndex = 0;
+    if (nodeIndex !== undefined && nodeIndex > 0) {
+      const parent = findNodeById(stripped, parentNodeId);
+      if (parent?.children) {
+        duplicateIndex = duplicateIndexOf(parent.children, nodeIndex, node as BookmarkInfo);
+      }
+    }
+    return generateStableId({ title: node.title, url: node.url } as BookmarkInfo, parentPath, duplicateIndex);
   }
 
   /**
@@ -322,10 +340,11 @@ export default defineBackground(() => {
     removeInfo: Bookmarks.OnRemovedRemoveInfoType
   ): Promise<void> {
     try {
-      // 换算为稳定 ID（与合并层的 ID 方案一致）
+      // 换算为稳定 ID（与合并层的 ID 方案一致；序号取被删节点原同级位置）
       const stableId = await computeStableIdForRemovedNode(
         { title: removeInfo.node?.title || '', url: removeInfo.node?.url },
-        removeInfo.parentId || ''
+        removeInfo.parentId || '',
+        removeInfo.index
       );
 
       let cache = await getLocalCache();

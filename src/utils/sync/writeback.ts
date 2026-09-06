@@ -7,7 +7,7 @@
  */
 
 import { BookmarkInfo } from '../models';
-import { normalizeBookmarkIds, normalizeTreeShape, generateStableId, isStructuralRootId } from '../bookmarkUtils';
+import { normalizeBookmarkIds, normalizeTreeShape, generateStableId, buildChildPath, isStructuralRootId } from '../bookmarkUtils';
 import { detectBookmarkBrowserType, resolveRootTargetBrowserId } from '../browserInfo';
 import { logger } from '../logger';
 
@@ -36,6 +36,9 @@ interface BookmarkNodeRef {
 /**
  * 遍历本地书签树，建立 stableId → 浏览器节点引用 的映射
  * 不修改原节点（浏览器 ID 需要保留用于 API 调用）
+ *
+ * P0-1: 同级同 URL（书签）/同名（文件夹）兄弟的序号计数规则
+ * 与 normalizeBookmarkIds / duplicateIndexOf 保持一致
  */
 function collectLocalRefs(
     nodes: BookmarkInfo[],
@@ -45,8 +48,18 @@ function collectLocalRefs(
     depth: number,
     out: Map<string, BookmarkNodeRef>
 ): void {
+    const urlSeen = new Map<string, number>();
+    const titleSeen = new Map<string, number>();
     for (const node of nodes) {
-        const stableId = generateStableId(node, parentPath);
+        let duplicateIndex: number;
+        if (node.url) {
+            duplicateIndex = urlSeen.get(node.url) ?? 0;
+            urlSeen.set(node.url, duplicateIndex + 1);
+        } else {
+            duplicateIndex = titleSeen.get(node.title) ?? 0;
+            titleSeen.set(node.title, duplicateIndex + 1);
+        }
+        const stableId = generateStableId(node, parentPath, duplicateIndex);
         out.set(stableId, {
             browserId: node.id || '',
             stableId,
@@ -58,7 +71,7 @@ function collectLocalRefs(
             depth,
         });
         if (node.children) {
-            const childPath = parentPath ? `${parentPath}/${node.title}` : node.title;
+            const childPath = buildChildPath(parentPath, node.title);
             collectLocalRefs(node.children, node.id || parentBrowserId, stableId, childPath, depth + 1, out);
         }
     }

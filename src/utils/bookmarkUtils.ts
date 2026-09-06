@@ -64,18 +64,22 @@ export function isStructuralRootId(browserId: string | undefined): boolean {
 
 /**
  * 生成稳定的书签 ID
- * 
- * 对于书签：基于 URL 生成 ID（URL 是书签的唯一标识）
+ *
+ * 对于书签：基于 URL + 父路径生成 ID（P0-1：掺入父路径使重复 URL 的
+ * 多份书签各自拥有独立 ID，不再互相覆盖或被同一墓碑误杀）
  * 对于文件夹：基于标题和父路径生成 ID
- * 
+ *
  * @param bookmark - 书签对象
- * @param parentPath - 父文件夹路径（用于文件夹 ID 生成）
+ * @param parentPath - 父路径（用于书签/文件夹 ID 生成，见 buildChildPath 的路径约定）
+ * @param duplicateIndex - 同级同 URL（书签）/同名（文件夹）兄弟中的序号
+ *   （P0-1：区分同一文件夹内的重复项；0 表示第一个，ID 与无序号时相同）
  * @returns 稳定的 ID 字符串
  */
-export function generateStableId(bookmark: BookmarkInfo, parentPath: string = ''): string {
+export function generateStableId(bookmark: BookmarkInfo, parentPath: string = '', duplicateIndex: number = 0): string {
     if (bookmark.url) {
-        // 书签：用 URL 生成稳定 ID
-        const hash = hashString(bookmark.url);
+        // 书签：用 URL + 父路径生成稳定 ID（顶层书签 parentPath 为空串，退化为纯 URL ID）
+        const base = parentPath ? `${parentPath}|${bookmark.url}` : bookmark.url;
+        const hash = hashString(duplicateIndex > 0 ? `${base}#${duplicateIndex}` : base);
         return `bm_${hash}`;
     }
 
@@ -87,10 +91,61 @@ export function generateStableId(bookmark: BookmarkInfo, parentPath: string = ''
         if (!bookmark.title) return SYNTHETIC_ROOT_ID;
     }
 
-    // 文件夹：用标题 + 父路径生成稳定 ID
+    // 文件夹：用标题 + 父路径生成稳定 ID（同级同名文件夹用序号区分）
     const path = parentPath ? `${parentPath}/${bookmark.title}` : bookmark.title;
-    const hash = hashString(path);
+    const hash = hashString(duplicateIndex > 0 ? `${path}#${duplicateIndex}` : path);
     return `folder_${hash}`;
+}
+
+/**
+ * 计算节点在同级中的重复序号（duplicateIndex）
+ *
+ * 规则：统计位于 index 之前、与目标节点同 URL（书签）或同名（文件夹）的兄弟数量。
+ * 该规则必须与 normalizeBookmarkIds / writeback.collectLocalRefs 的遍历计数保持一致——
+ * background 计算删除墓碑时节点已不在树中，只能按位置反查，故独立成函数供其调用。
+ *
+ * @param siblings - 目标节点父级的 children 数组；删除场景传删除后的数组，
+ *   位置在 index 之前的兄弟不受删除影响，计数仍然正确
+ * @param index - 目标节点在父级 children 中的下标（删除场景传 removeInfo.index）
+ * @param target - 目标节点（删除场景取 removeInfo.node，其已不在 siblings 中）
+ */
+export function duplicateIndexOf(siblings: BookmarkInfo[], index: number, target: BookmarkInfo): number {
+    if (index <= 0 || siblings.length === 0) return 0;
+    let count = 0;
+    const stop = Math.min(index, siblings.length);
+    for (let i = 0; i < stop; i++) {
+        const sibling = siblings[i];
+        if (target.url) {
+            if (sibling.url === target.url) count++;
+        } else if (!sibling.url && sibling.title === target.title) {
+            count++;
+        }
+    }
+    return count;
+}
+
+/**
+ * 旧版（纯 URL）书签稳定 ID
+ *
+ * 仅用于 P0-1 升级过渡：旧版本生成的墓碑只记录纯 URL ID，升级后 30 天 TTL 内
+ * 按"同 URL 即同书签"的旧语义继续匹配，防止已删除书签复活一次；TTL 过后自然消失。
+ */
+export function legacyBookmarkId(url: string): string {
+    return `bm_${hashString(url)}`;
+}
+
+/**
+ * 计算节点的子树路径前缀（parentPath 约定的唯一实现，三处消费方必须一致：
+ * normalizeBookmarkIds / writeback.collectLocalRefs / background.findNodePath）
+ *
+ * 顶层节点的子树使用类型化根 ID（root_toolbar 等）而非本地化标题，
+ * 保证"书签栏"与"Bookmarks Bar"下的同名书签/文件夹跨语言、跨设备 ID 一致。
+ */
+export function buildChildPath(parentPath: string, nodeTitle: string): string {
+    if (parentPath) {
+        return `${parentPath}/${nodeTitle}`;
+    }
+    return resolveRootTypeId(nodeTitle) ?? nodeTitle;
 }
 
 /**
@@ -119,6 +174,9 @@ export function normalizeTreeShape(tree: BookmarkInfo[]): BookmarkInfo[] {
  * 从树中剔除已被墓碑标记的节点（含整个子树）
  * 用于手动上传前过滤，防止已被其他设备删除的书签"复活"
  *
+ * P0-1 升级过渡：旧版本墓碑只记录纯 URL ID（legacyBookmarkId），
+ * 30 天 TTL 内按旧语义继续匹配同 URL 书签，之后随过期自然消失。
+ *
  * @param tree - 已标准化的书签树
  * @param tombstoneIds - 墓碑 ID 集合
  * @returns 过滤后的新书签树
@@ -127,6 +185,9 @@ export function filterTombstonedNodes(tree: BookmarkInfo[], tombstoneIds: Set<st
     const result: BookmarkInfo[] = [];
     for (const node of tree) {
         if (node.id && tombstoneIds.has(node.id)) {
+            continue;
+        }
+        if (node.url && tombstoneIds.has(legacyBookmarkId(node.url))) {
             continue;
         }
         if (node.children) {
@@ -152,11 +213,24 @@ export function normalizeBookmarkIds(
     parentPath: string = '',
     parentId?: string
 ): BookmarkInfo[] {
+    // P0-1: 同级同 URL（书签）/同名（文件夹）兄弟按出现顺序编号，
+    // 使同一文件夹内的重复项各自拥有独立 ID（与 duplicateIndexOf 的规则一致）
+    const urlSeen = new Map<string, number>();
+    const titleSeen = new Map<string, number>();
     for (const bookmark of bookmarks) {
+        let duplicateIndex: number;
+        if (bookmark.url) {
+            duplicateIndex = urlSeen.get(bookmark.url) ?? 0;
+            urlSeen.set(bookmark.url, duplicateIndex + 1);
+        } else {
+            duplicateIndex = titleSeen.get(bookmark.title) ?? 0;
+            titleSeen.set(bookmark.title, duplicateIndex + 1);
+        }
+
         // 生成稳定 ID
-        const newId = generateStableId(bookmark, parentPath);
+        const newId = generateStableId(bookmark, parentPath, duplicateIndex);
         bookmark.id = newId;
-        
+
         // 关键修复：始终更新 parentId
         // 如果传入了 parentId 参数，使用它
         // 否则清除 parentId（表示这是根级书签）
@@ -166,10 +240,10 @@ export function normalizeBookmarkIds(
             // 根级书签不应该有 parentId
             bookmark.parentId = undefined;
         }
-        
+
         // 递归处理子节点
         if (bookmark.children && bookmark.children.length > 0) {
-            const childPath = parentPath ? `${parentPath}/${bookmark.title}` : bookmark.title;
+            const childPath = buildChildPath(parentPath, bookmark.title);
             normalizeBookmarkIds(bookmark.children, childPath, newId);
         }
     }

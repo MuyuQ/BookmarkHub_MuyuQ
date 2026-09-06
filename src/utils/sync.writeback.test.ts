@@ -427,6 +427,48 @@ describe('P0-2: 合并结果写回本地书签树', () => {
     expect(store.root.children![1].children!.map(c => c.url)).toContain('https://a.example.com');
   });
 
+  it('P0-1: 跨目录移动书签不产生墓碑且正确传播', async () => {
+    // 初始：本地与远程都有 A@书签栏，先同步建立基线
+    store.root.children![0].children = [
+      { id: '10', parentId: '1', title: 'A', url: 'https://a.example.com', index: 0, dateAdded: 1000 },
+    ];
+    const remoteContent = makeRemoteContent([
+      { id: '30', title: 'A', url: 'https://a.example.com', index: 0, dateAdded: 1000 },
+    ]);
+    vi.mocked(BookmarkService.get).mockResolvedValue(remoteContent);
+    let uploadedContent = '';
+    vi.mocked(BookmarkService.update).mockImplementation(async (payload: { files: Record<string, { content: string }> }) => {
+      uploadedContent = Object.values(payload.files)[0].content;
+      return {} as never;
+    });
+
+    const first = await performSync();
+    expect(first.status).toBe('success');
+
+    // 用户把 A 从书签栏移到其他书签（直接操作树，模拟已发生的移动）
+    await store.move('10', { parentId: '2', index: 0 });
+
+    // 下一次同步：移动应作为变更传播，且不产生墓碑
+    vi.mocked(BookmarkService.get).mockResolvedValue(uploadedContent);
+    vi.mocked(BookmarkService.update).mockClear();
+
+    const second = await performSync();
+    expect(second.status).toBe('success');
+
+    expect(store.root.children![1].children!.map(c => c.url)).toContain('https://a.example.com');
+    expect(store.root.children![0].children!.map(c => c.url)).not.toContain('https://a.example.com');
+    const cache = storageMap.get('bookmarkHubCache') as { tombstones: unknown[] };
+    expect(cache.tombstones).toHaveLength(0);
+    expect(uploadedContent).toContain('https://a.example.com');
+
+    // 第三次同步无变更（移动不会被误判为删除+新建）
+    vi.mocked(BookmarkService.get).mockResolvedValue(uploadedContent);
+    vi.mocked(BookmarkService.update).mockClear();
+    const third = await performSync();
+    expect(third.status).toBe('success');
+    expect(vi.mocked(BookmarkService.update)).not.toHaveBeenCalled();
+  });
+
   it('P0-1: 同文件夹重复 URL 删除其一不误杀另一份（序号化 ID 端到端）', async () => {
     // 初始：本地与远程在书签栏各有同 URL 的两份书签，先同步建立基线
     store.root.children![0].children = [

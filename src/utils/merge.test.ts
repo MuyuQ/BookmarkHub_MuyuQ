@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { threeWayMerge, mergeTombstones, filterChangesByTombstones, cleanExpiredTombstones, ThreeWayMergeParams } from './merge'
+import { legacyBookmarkId } from './bookmarkUtils'
 import { BookmarkInfo, Tombstone } from './models'
 import { ChangeDetectionResult } from './changeDetection'
 
@@ -517,5 +518,197 @@ describe('filterChangesByTombstones', () => {
     expect(changes.created).toHaveLength(0)
     // 修改应保留（filterChangesByTombstones 目前只过滤 created）
     expect(changes.modified).toHaveLength(1)
+  })
+})
+// ============== P0-1: 重复 URL 书签与跨目录移动 ==============
+
+describe('P0-1: 重复 URL 书签', () => {
+  const urlX = 'https://x.example.com'
+
+  it('首次同步：本地与远程同 URL 不同目录的副本都应保留（不互相去重）', () => {
+    const local: BookmarkInfo[] = [
+      { id: 'bm_toolbar', title: 'X', url: urlX },
+    ]
+    const remote: BookmarkInfo[] = [
+      { id: 'bm_toolbar', title: 'X', url: urlX },
+      { id: 'bm_other', title: 'X', url: urlX },
+    ]
+
+    const result = threeWayMerge(createThreeWayParams({
+      baseline: null,
+      local,
+      remote,
+    }))
+
+    expect(result.merged.find(b => b.id === 'bm_toolbar')).toBeDefined()
+    expect(result.merged.find(b => b.id === 'bm_other')).toBeDefined()
+  })
+
+  it('删除重复副本之一只生成该路径的墓碑，另一副本保留在合并结果中', () => {
+    const baseline: BookmarkInfo[] = [
+      { id: 'bm_toolbar', title: 'X', url: urlX },
+      { id: 'bm_other', title: 'X', url: urlX },
+    ]
+    const local: BookmarkInfo[] = [
+      { id: 'bm_other', title: 'X', url: urlX },
+    ]
+    const remote: BookmarkInfo[] = [
+      { id: 'bm_toolbar', title: 'X', url: urlX },
+      { id: 'bm_other', title: 'X', url: urlX },
+    ]
+
+    const result = threeWayMerge(createThreeWayParams({
+      baseline,
+      local,
+      remote,
+    }))
+
+    expect(result.merged.find(b => b.id === 'bm_other')).toBeDefined()
+    expect(result.merged.find(b => b.id === 'bm_toolbar')).toBeUndefined()
+    expect(result.tombstones.some(t => t.id === 'bm_toolbar')).toBe(true)
+  })
+
+  it('跨目录移动不应生成墓碑', () => {
+    const baseline: BookmarkInfo[] = [
+      { id: 'bm_toolbar', title: 'X', url: urlX },
+    ]
+    // 本地把 X 从书签栏移到其他书签（新 ID 方案下 ID 变化）
+    const local: BookmarkInfo[] = [
+      { id: 'bm_other', title: 'X', url: urlX },
+    ]
+    const remote: BookmarkInfo[] = [
+      { id: 'bm_toolbar', title: 'X', url: urlX },
+    ]
+
+    const result = threeWayMerge(createThreeWayParams({
+      baseline,
+      local,
+      remote,
+    }))
+
+    expect(result.tombstones).toHaveLength(0)
+    expect(result.merged.find(b => b.id === 'bm_other')).toBeDefined()
+    expect(result.merged.find(b => b.id === 'bm_toolbar')).toBeUndefined()
+  })
+
+  it('移动回 30 天内删除过的位置不应被旧墓碑压制', () => {
+    const baseline: BookmarkInfo[] = [
+      { id: 'bm_other', title: 'X', url: urlX },
+    ]
+    // 本地把 X 移回书签栏（该位置曾有墓碑）
+    const local: BookmarkInfo[] = [
+      { id: 'bm_toolbar', title: 'X', url: urlX },
+    ]
+    const remote: BookmarkInfo[] = [
+      { id: 'bm_other', title: 'X', url: urlX },
+    ]
+
+    const result = threeWayMerge(createThreeWayParams({
+      baseline,
+      local,
+      remote,
+      localTombstones: [{ id: 'bm_toolbar', deletedAt: Date.now() - 10 * 24 * 60 * 60 * 1000, deletedBy: 'test' }],
+    }))
+
+    // 重分类为 moved 后不受墓碑过滤（墓碑只过滤 created）
+    expect(result.merged.find(b => b.id === 'bm_toolbar')).toBeDefined()
+  })
+
+  it('两端同时把同一书签移到不同目录应识别为冲突并按 auto 裁决', () => {
+    const baseline: BookmarkInfo[] = [
+      { id: 'bm_base', title: 'X', url: urlX, dateAdded: 1000 },
+    ]
+    const local: BookmarkInfo[] = [
+      { id: 'bm_local', title: 'X', url: urlX, dateAdded: 2000 },
+    ]
+    const remote: BookmarkInfo[] = [
+      { id: 'bm_remote', title: 'X', url: urlX, dateAdded: 1000 },
+    ]
+
+    const result = threeWayMerge(createThreeWayParams({
+      baseline,
+      local,
+      remote,
+      conflictMode: 'auto',
+    }))
+
+    // 冲突被识别（通过 URL 回退配对），auto 模式解决后无未裁决冲突
+    expect(result.conflicts).toHaveLength(0)
+    // 本地时间较新获胜：合并结果包含本地位置，不包含远程位置，也不保留旧位置
+    expect(result.merged.find(b => b.id === 'bm_local')).toBeDefined()
+    expect(result.merged.find(b => b.id === 'bm_remote')).toBeUndefined()
+    expect(result.merged.find(b => b.id === 'bm_base')).toBeUndefined()
+    // 移动不产生墓碑
+    expect(result.tombstones).toHaveLength(0)
+  })
+})
+
+// ============== P0-1 追加：旧墓碑过渡与同文件夹重复 ==============
+
+describe('P0-1: 旧版墓碑升级过渡', () => {
+  const urlX = 'https://x.example.com'
+
+  it('旧版纯 URL 墓碑应压制同 URL 书签的新建（30 天过渡期）', () => {
+    const local: BookmarkInfo[] = [
+      { id: 'bm_new_path', title: 'X', url: urlX },
+    ]
+
+    const result = threeWayMerge(createThreeWayParams({
+      baseline: null,
+      local,
+      remote: [],
+      localTombstones: [{ id: legacyBookmarkId(urlX), deletedAt: Date.now(), deletedBy: 'old-device' }],
+    }))
+
+    expect(result.merged.find(b => b.url === urlX)).toBeUndefined()
+  })
+
+  it('旧版墓碑不影响其他 URL 的书签创建', () => {
+    const local: BookmarkInfo[] = [
+      { id: 'bm_y', title: 'Y', url: 'https://y.example.com' },
+    ]
+
+    const result = threeWayMerge(createThreeWayParams({
+      baseline: null,
+      local,
+      remote: [],
+      localTombstones: [{ id: legacyBookmarkId(urlX), deletedAt: Date.now(), deletedBy: 'old-device' }],
+    }))
+
+    expect(result.merged.find(b => b.id === 'bm_y')).toBeDefined()
+  })
+})
+
+describe('P0-1: 同文件夹重复 URL 书签', () => {
+  const urlX = 'https://x.example.com'
+
+  // 与真实数据一致：normalizeBookmarkIds 会为非根节点写入 parentId
+  const child = (id: string, title: string): BookmarkInfo => ({ id, title, url: urlX, parentId: 'folder_f' })
+  const folder = (children: BookmarkInfo[]): BookmarkInfo[] => [
+    { id: 'folder_f', title: 'F', children },
+  ]
+
+  it('删除同文件夹重复项之一只生成该序号的墓碑，另一份保留', () => {
+    const baseline = folder([child('bm_d0', 'X'), child('bm_d1', 'X 副本')])
+    // 本地删除了第二份（bm_d1）
+    const local = folder([child('bm_d0', 'X')])
+    const remote = folder([child('bm_d0', 'X'), child('bm_d1', 'X 副本')])
+
+    const result = threeWayMerge(createThreeWayParams({ baseline, local, remote }))
+
+    expect(result.merged[0].children!.find(b => b.id === 'bm_d0')).toBeDefined()
+    expect(result.merged[0].children!.find(b => b.id === 'bm_d1')).toBeUndefined()
+    expect(result.tombstones.some(t => t.id === 'bm_d1')).toBe(true)
+  })
+
+  it('本地新增同文件夹重复项应作为 created 传播（不与已有副本去重）', () => {
+    const baseline = folder([child('bm_d0', 'X')])
+    const local = folder([child('bm_d0', 'X'), child('bm_d1', 'X 副本')])
+    const remote = folder([child('bm_d0', 'X')])
+
+    const result = threeWayMerge(createThreeWayParams({ baseline, local, remote }))
+
+    expect(result.merged[0].children!).toHaveLength(2)
+    expect(result.tombstones).toHaveLength(0)
   })
 })

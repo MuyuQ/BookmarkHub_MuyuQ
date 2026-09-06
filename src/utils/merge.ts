@@ -1,7 +1,7 @@
 import { BookmarkInfo, ConflictInfo, Tombstone } from './models';
 import { BookmarkChange, detectChanges, ChangeDetectionResult } from './changeDetection';
 import { logger } from './logger';
-import { getBookmarkCount } from './bookmarkUtils';
+import { getBookmarkCount, legacyBookmarkId } from './bookmarkUtils';
 
 export type ConflictMode = 'auto' | 'prompt';
 
@@ -67,8 +67,27 @@ function findConflicts(
     remoteById.set(r.bookmark.id || '', r);
   }
 
+  // P0-1: 跨目录移动会改变稳定 ID，两端同时移动/移动+修改同一书签时
+  // 双方 ID 不同，按 ID 配对会漏检冲突（导致移动被静默回退或重复保留）。
+  // 对远程 moved 变更建立 URL 索引作回退配对；不配对 created（避免把
+  // "本地新建副本"与"远程移动另一副本"误判为冲突）。
+  const remoteMovedByUrl = new Map<string, BookmarkChange>();
+  for (const r of remote.changes) {
+    if (r.type === 'moved' && r.bookmark.url && !remoteMovedByUrl.has(r.bookmark.url)) {
+      remoteMovedByUrl.set(r.bookmark.url, r);
+    }
+  }
+
+  const consumedByFallback = new Set<BookmarkChange>();
   for (const l of local.changes) {
-    const r = remoteById.get(l.bookmark.id || '');
+    let r = remoteById.get(l.bookmark.id || '');
+    if (!r && l.type !== 'created' && l.bookmark.url) {
+      const fallback = remoteMovedByUrl.get(l.bookmark.url);
+      if (fallback && !consumedByFallback.has(fallback)) {
+        r = fallback;
+        consumedByFallback.add(fallback);
+      }
+    }
     if (!r) continue;
     if (l.type === 'created' && r.type === 'created') continue;
     if (l.type === 'deleted' && r.type === 'deleted') continue;
@@ -359,10 +378,15 @@ export function filterChangesByTombstones(
   const beforeCount = changes.created.length;
 
   // 从创建列表中移除已删除的书签（防止复活）
+  // P0-1 升级过渡：旧版墓碑只记录纯 URL ID，30 天 TTL 内按旧语义继续匹配同 URL 书签
   changes.created = changes.created.filter(c => {
     const id = c.bookmark.id;
     if (id && tombstoneIds.has(id)) {
       logger.debug('过滤: 跳过已删除书签的创建', { id, title: c.bookmark.title });
+      return false;
+    }
+    if (c.bookmark.url && tombstoneIds.has(legacyBookmarkId(c.bookmark.url))) {
+      logger.debug('过滤: 跳过已删除书签的创建（旧版 URL 墓碑匹配）', { id, title: c.bookmark.title });
       return false;
     }
     return true;
@@ -375,6 +399,21 @@ export function filterChangesByTombstones(
   if (beforeCount !== changes.created.length) {
     logger.debug('过滤墓碑变更', { filtered: beforeCount - changes.created.length });
   }
+}
+
+/**
+ * 应用单条 moved 变更
+ *
+ * 同 ID 移动（同目录内排序）原地更新；跨目录移动在 P0-1 ID 方案下
+ * previous.id !== bookmark.id，需先移除旧位置节点再插入新位置。
+ */
+function applyMovedChange(result: BookmarkInfo[], change: BookmarkChange): void {
+  if (change.previous && change.previous.id && change.previous.id !== change.bookmark.id) {
+    removeBookmarkFromTree(result, change.previous.id);
+    addBookmarkToTree(result, change.bookmark);
+    return;
+  }
+  updateBookmarkInTree(result, change.bookmark);
 }
 
 /**
@@ -425,7 +464,7 @@ export function applyChangesToBaseline(
   }
   for (const change of remoteChanges.moved) {
     if (!lostToLocal(change.bookmark.id || '')) {
-      updateBookmarkInTree(result, change.bookmark);
+      applyMovedChange(result, change);
     }
   }
 
@@ -447,7 +486,7 @@ export function applyChangesToBaseline(
   }
   for (const change of localChanges.moved) {
     if (!lostToRemote(change.bookmark.id || '')) {
-      updateBookmarkInTree(result, change.bookmark);
+      applyMovedChange(result, change);
     }
   }
 
